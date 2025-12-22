@@ -41,7 +41,7 @@ Designed for:
 
 ## 📸 Screenshots
 
-![Terminal Preview](terminal-main.png?raw=true "Terminal Preview")
+![Terminal Preview](screenshots/terminal-main.png "Terminal Preview")
 
 ```text
 screenshots/
@@ -70,7 +70,7 @@ screenshots/
 * `bat`
 * `neovim`
 
-> Full installation instructions are available in [`docs/INSTALL.md`](docs/INSTALL.md)
+> Full installation instructions are available in [`docs/cyberpunk_zsh_kitty_setup_guide.md`](docs/cyberpunk_zsh_kitty_setup_guide.md)
 
 ---
 
@@ -79,8 +79,8 @@ screenshots/
 ### 1️⃣ Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/cyberpunk-zsh-kitty.git
-cd cyberpunk-zsh-kitty
+git clone https://github.com/tiredbooy/cyberpunk-terminal.git
+cd cyberpunk-terminal
 ```
 
 ### 2️⃣ Copy configuration files
@@ -159,7 +159,8 @@ cyberpunk-zsh-kitty/
 ├── kitty/
 │   └── kitty.conf
 ├── docs/
-│   └── INSTALL.md
+│   └── cyberpunk_zsh_kitty_setup_guide
+|   └── Cyberpunk Zsh + Kitty Setup Guide.pdf
 ├── screenshots/
 └── README.md
 ```
