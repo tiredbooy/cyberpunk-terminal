@@ -41,7 +41,7 @@ Designed for:
 
 ## 📸 Screenshots
 
-> Add screenshots here for maximum impact
+![Terminal Preview](terminal-main.png?raw=true "Terminal Preview")
 
 ```text
 screenshots/
