@@ -27,21 +27,49 @@ sleep 0.05
 COLS=$(tput cols)
 LINES=$(tput lines)
 
-# === GATHER SYSTEM INFO ===
-UPTIME=$(uptime -p | sed 's/up //')
-KERNEL=$(uname -r)
-DISTRO=$(grep PRETTY_NAME /etc/os-release | cut -d= -f2- | tr -d '"')
-SHELL_NAME=$(basename "$SHELL")
-MEM_USED=$(free -h | awk '/Mem/ {print $3}')
-MEM_TOTAL=$(free -h | awk '/Mem/ {print $2}')
-MEM_PERCENT=$(free | awk '/Mem/ {printf "%.0f", $3/$2 * 100}')
-PACKAGES=$(pacman -Q 2>/dev/null | wc -l)
-GPU=$(lspci 2>/dev/null | grep -E "VGA|3D" | cut -d: -f3- | sed 's/^ *//' | head -n1)
-HOSTNAME=$(hostname)
+# === GATHER SYSTEM INFO (portable across distros + macOS) ===
+SHELL_NAME=$(basename "${SHELL:-sh}")
+HOSTNAME=$(hostname 2>/dev/null || uname -n)
 USER=$(whoami)
 DATE=$(date '+%A, %B %d %Y')
 TIME=$(date '+%H:%M:%S')
-LOAD=$(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}' | tr -d ',')
+
+# Uptime — prefer the pretty form, fall back to raw uptime.
+UPTIME=$(uptime -p 2>/dev/null | sed 's/up //')
+[[ -z "$UPTIME" ]] && UPTIME=$(uptime 2>/dev/null | sed -E 's/.*up *([^,]*),.*/\1/' | sed 's/^ *//')
+
+KERNEL=$(uname -r)
+
+# Distro / OS name.
+if [[ -r /etc/os-release ]]; then
+    DISTRO=$(. /etc/os-release; echo "${PRETTY_NAME:-$NAME}")
+elif [[ "$(uname)" == "Darwin" ]]; then
+    DISTRO="macOS $(sw_vers -productVersion 2>/dev/null)"
+else
+    DISTRO=$(uname -s)
+fi
+
+# Memory — Linux uses free(1); macOS falls back gracefully.
+if command -v free >/dev/null 2>&1; then
+    MEM_USED=$(free -h | awk '/Mem/ {print $3}')
+    MEM_TOTAL=$(free -h | awk '/Mem/ {print $2}')
+    MEM_PERCENT=$(free | awk '/Mem/ {printf "%.0f", $3/$2 * 100}')
+else
+    MEM_USED="?"; MEM_TOTAL="?"; MEM_PERCENT=0
+fi
+
+# Installed package count — detect the package manager.
+if   command -v pacman >/dev/null 2>&1; then PACKAGES=$(pacman -Qq 2>/dev/null | wc -l)
+elif command -v dpkg-query >/dev/null 2>&1; then PACKAGES=$(dpkg-query -f '.\n' -W 2>/dev/null | wc -l)
+elif command -v rpm >/dev/null 2>&1; then PACKAGES=$(rpm -qa 2>/dev/null | wc -l)
+elif command -v brew >/dev/null 2>&1; then PACKAGES=$(brew list 2>/dev/null | wc -l)
+else PACKAGES="?"; fi
+
+# GPU (optional — lspci may be absent).
+GPU=$(lspci 2>/dev/null | grep -E "VGA|3D" | cut -d: -f3- | sed 's/^ *//' | head -n1)
+
+# Load average (1-min) — portable extraction.
+LOAD=$(uptime 2>/dev/null | sed -E 's/.*load average[s]?: *//' | awk -F',' '{gsub(/ /,"",$1); print $1}')
 
 # === COMPUTE PADDING ===
 TEXT_START_PERCENT=5
@@ -134,11 +162,14 @@ echo ""
 print_neural_border
 
 # System info with progress bars
+print_fancy_info "" "USER   " "${USER}@${HOSTNAME}" "$NEON_PINK"
 print_fancy_info "🐧" "OS     " "$DISTRO" "$ELECTRIC_BLUE"
+print_fancy_info "" "KERNEL " "$KERNEL" "$NEON_PURPLE"
 print_fancy_info "🐚" "SHELL  " "$SHELL_NAME" "$NEON_CYAN"
-print_fancy_info "󰍛" "MEMORY  " "${MEM_USED} / ${MEM_TOTAL}" "$NEON_YELLOW" "$(draw_bar $MEM_PERCENT)"
-print_fancy_info "󰓅" "LOAD    " "$LOAD" "$NEON_GREEN"
-[[ -n "$GPU" ]] && print_fancy_info "󰢮" "GPU     " "${GPU:0:50}" "$CYBER_RED"
+[[ "$PACKAGES" != "?" ]] && print_fancy_info "" "PKGS   " "$PACKAGES" "$NEON_GREEN"
+print_fancy_info "󰍛" "MEMORY " "${MEM_USED} / ${MEM_TOTAL}" "$NEON_YELLOW" "$(draw_bar $MEM_PERCENT)"
+print_fancy_info "󰓅" "LOAD   " "$LOAD" "$NEON_GREEN"
+[[ -n "$GPU" ]] && print_fancy_info "󰢮" "GPU    " "${GPU:0:50}" "$CYBER_RED"
 
 print_neural_footer
 echo ""
