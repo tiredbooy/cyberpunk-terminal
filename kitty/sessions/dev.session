@@ -1,0 +1,24 @@
+# ============================================================
+#   Cyberpunk dev session — a ready-to-work layout
+# ------------------------------------------------------------
+#   Load it with:
+#     kitty --session ~/.config/kitty/sessions/dev.session
+#   …or from a project directory:
+#     kitty --session ~/.config/kitty/sessions/dev.session --directory ~/code/myproject
+#
+#   Layout (tall): a large editor pane on the left, with a shell
+#   and a live system monitor stacked on the right.
+# ============================================================
+
+new_tab dev
+layout tall
+
+# Main pane — your editor. Swap nvim for whatever you use.
+launch --title editor --cwd=current nvim
+focus
+
+# A working shell.
+launch --title shell --cwd=current
+
+# Live system monitor (falls back to top if btop isn't installed).
+launch --title monitor --cwd=current sh -c 'command -v btop >/dev/null 2>&1 && exec btop || exec top'
