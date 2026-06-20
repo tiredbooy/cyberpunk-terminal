@@ -1,6 +1,10 @@
 # ============================================================
 #                  CYBERPUNK ZSH CONFIGURATION
-#         Ultra Clean • Sorted • Fully Commented Version
+#        Portable • Self-healing • Fully Commented
+# ------------------------------------------------------------
+#  Works on Arch, Debian/Ubuntu, Fedora, openSUSE and macOS.
+#  Every optional tool is detected at runtime, so a missing
+#  package degrades gracefully instead of throwing errors.
 # ============================================================
 
 
@@ -8,8 +12,19 @@
 # CORE ZSH OPTIONS
 # ------------------------------------------------------------
 
+# Put user-local bin dirs (where fallback installs land) on PATH.
+for _cp_bindir in "$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/.atuin/bin"; do
+    [[ -d "$_cp_bindir" && ":$PATH:" != *":$_cp_bindir:"* ]] && export PATH="$_cp_bindir:$PATH"
+done
+unset _cp_bindir
+
 autoload -U colors && colors          # Enable terminal colors
 setopt PROMPT_SUBST                   # Allow variables inside PROMPT
+setopt interactive_comments           # Allow # comments at the prompt
+setopt auto_cd                        # `..` or a dir name alone = cd
+setopt auto_pushd                     # cd pushes onto the dir stack
+setopt pushd_ignore_dups              # ...without duplicates
+setopt no_beep                        # Silence the terminal bell
 
 
 # ------------------------------------------------------------
@@ -24,9 +39,30 @@ setopt appendhistory                  # Append to history file
 setopt sharehistory                   # Share history between sessions
 setopt inc_append_history             # Write instantly
 setopt hist_ignore_all_dups           # Remove duplicates
+setopt hist_ignore_space              # Lines starting with space aren't saved
 setopt hist_reduce_blanks             # Strip unnecessary spaces
 setopt hist_verify                    # Edit before executing
 setopt extended_history               # Save timestamps
+
+
+# ------------------------------------------------------------
+# PORTABILITY HELPERS
+# ------------------------------------------------------------
+
+# Source the first file that exists from a list of candidates.
+_cp_source_first() {
+    local f
+    for f in "$@"; do
+        if [[ -r "$f" ]]; then
+            source "$f"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# True if a command exists on PATH.
+_cp_has() { command -v "$1" >/dev/null 2>&1; }
 
 
 # ------------------------------------------------------------
@@ -34,272 +70,28 @@ setopt extended_history               # Save timestamps
 # ------------------------------------------------------------
 
 autoload -Uz compinit
-compinit -u                           # Fast, unsecure mode (faster startup)
-
-# Case-insensitive match (a = A)
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
-
-# Substring match (do → Downloads/Documents)
-zstyle ':completion:*' matcher-list '+m:{a-zA-Z}={A-Za-z}' '+m:{_-}={-_}'
-
-# Show a menu when multiple matches appear
-zstyle ':completion:*' menu select
-
-# Colorized completion list
-zstyle ':completion:*' list-colors ''
-
-# Group results by type (files, dirs, etc)
-zstyle ':completion:*' group-name ''
-
-setopt complete_in_word               # Complete in the middle of a typed word
-setopt completealiases                # Allow completion after aliases
-
-
-# ------------------------------------------------------------
-# AUTOSUGGESTIONS (SOFT GRAY GHOST TEXT)
-# ------------------------------------------------------------
-
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-
-ZSH_AUTOSUGGEST_STRATEGY=(history completion)   # Predict paths + old commands
-ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=50
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=245'        # Perfect light gray
-
-# Prevent arrow-left from accepting suggestion
-bindkey '^[[D' backward-char
-
-
-# ------------------------------------------------------------
-# SYNTAX HIGHLIGHTING
-# ------------------------------------------------------------
-
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-
-# ============================================
-# ZOXIDE — WARP-SPEED DIRECTORY JUMPING
-# ============================================
-
-# Initialize zoxide (smarter cd)
-eval "$(zoxide init zsh)"
-
-# Replace cd completely
-alias cd="z"
-
-
-# ============================================
-# CYBERPUNK COMMAND EXECUTION ANIMATION
-# ============================================
-
-SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
-SPINNER_PID=""
-
-# Start spinner before command execution
-preexec() {
-    timer=$(($(date +%s%N)/1000000))
-
-    (
-        i=0
-        while true; do
-            printf "\r${NEON_PINK}${SPINNER_FRAMES[i]}${RESET} "
-            i=$(( (i+1) % ${#SPINNER_FRAMES[@]} ))
-            sleep 0.08
-        done
-    ) &
-    SPINNER_PID=$!
-}
-
-# Kill spinner after execution and restore prompt
-precmd() {
-    if [[ -n "$SPINNER_PID" ]]; then
-        kill $SPINNER_PID 2>/dev/null
-        unset SPINNER_PID
-        printf "\r"
-    fi
-
-    # Execution timer
-    if [ $timer ]; then
-        now=$(($(date +%s%N)/1000000))
-        elapsed=$(($now-$timer))
-        export RPROMPT="${DARK_GRAY}took ${elapsed}ms${RESET}"
-        unset timer
-    fi
-}
-
-
-
-# ------------------------------------------------------------
-# FZF SUPER-TAB (FD + EZA + BAT PREVIEW)
-# ------------------------------------------------------------
-
-[ -f /usr/share/fzf/completion.zsh ] && source /usr/share/fzf/completion.zsh
-[ -f /usr/share/fzf/key-bindings.zsh ] && source /usr/share/fzf/key-bindings.zsh
-
-export FZF_DEFAULT_COMMAND='fd --hidden --follow --exclude .git'
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-export FZF_ALT_C_COMMAND="fd --type d"
-
-export FZF_DEFAULT_OPTS="
- --height=80%
- --layout=reverse
- --border
- --preview 'bat --style=numbers --color=always {} || eza --color=always --icons -lah {}'
- --prompt='❯ '
-"
-
-
-# ------------------------------------------------------------
-# CUSTOM KEY BINDINGS (QUALITY OF LIFE)
-# ------------------------------------------------------------
-
-bindkey '^[[H' beginning-of-line      # Home key
-bindkey '^[[F' end-of-line            # End key
-bindkey '^w' backward-kill-word       # Ctrl+W = delete word backward
-bindkey '^k' kill-line                # Ctrl+K = delete to end of line
-bindkey '^u' backward-kill-line       # Ctrl+U = delete line backward
-
-
-# ------------------------------------------------------------
-# CYBERPUNK PROMPT COLORS
-# ------------------------------------------------------------
-
-NEON_CYAN='%F{51}'
-NEON_PURPLE='%F{141}'
-DEEP_PURPLE='%F{135}'
-NEON_PINK='%F{201}'
-NEON_GREEN='%F{46}'
-NEON_YELLOW='%F{226}'
-CYBER_RED='%F{196}'
-DARK_GRAY='%F{240}'
-RESET='%f'
-BOLD='%B'
-UNBOLD='%b'
-
-# Colored tab menu
-zstyle ':completion:*:default' list-colors "${(s.:.)LS_COLORS}"
-
-# Selection highlight color
-zmodload zsh/complist
-zstyle ':completion:*' menu select=2
-
-
-# ------------------------------------------------------------
-# GIT PROMPT INFORMATION
-# ------------------------------------------------------------
-
-git_prompt_info() {
-    if git rev-parse --git-dir > /dev/null 2>&1; then
-        local branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
-        local status=$(git status --porcelain 2>/dev/null)
-
-        if [[ -n "$status" ]]; then
-            echo "${CYBER_RED}▓${RESET} ${NEON_YELLOW}${branch}${RESET} ${CYBER_RED}[±]${RESET}"
-        else
-            echo "${NEON_GREEN}▓${RESET} ${NEON_CYAN}${branch}${RESET} ${NEON_GREEN}[✓]${RESET}"
-        fi
-    fi
-}
-
-
-# ------------------------------------------------------------
-# COMMAND EXECUTION TIMER (RIGHT SIDE)
-# ------------------------------------------------------------
-
-preexec() { timer=$(($(date +%s%N)/1000000)); }
-
-precmd() {
-    if [ $timer ]; then
-        now=$(($(date +%s%N)/1000000))
-        elapsed=$(($now-$timer))
-        RPROMPT="${DARK_GRAY}took ${elapsed}ms${RESET}"
-        unset timer
-    fi
-}
-
-
-# ------------------------------------------------------------
-# CYBERPUNK PROMPT (YOUR ORIGINAL STYLE)
-# ------------------------------------------------------------
-
-PROMPT='
-${DEEP_PURPLE}╭─${RESET}${NEON_PURPLE}▓▒░${RESET} ${BOLD}${NEON_CYAN}%n${RESET}${DARK_GRAY}@${RESET}${DEEP_PURPLE}%m${RESET} ${DARK_GRAY}in${RESET} ${NEON_YELLOW}%~${RESET} $(git_prompt_info)
-${DEEP_PURPLE}╰─${RESET}${NEON_PINK}❯${NEON_PURPLE}❯${NEON_CYAN}❯${RESET} '
-
-RPROMPT='${DARK_GRAY}%*${RESET} %(?.${NEON_GREEN}✓.${CYBER_RED}✗ %?)${RESET}'
-
-
-# ------------------------------------------------------------
-# ALIASES (COLOR + MODERN TOOLS)
-# ------------------------------------------------------------
-
-alias ls='eza --icons --color=always'
-alias ll='eza -lah --icons'
-alias tree='eza --tree --icons'
-alias cat='bat'
-alias vim='nvim'
-alias grep='grep --color=auto'
-
-
-# ------------------------------------------------------------
-# CUSTOM WELCOME SCREEN (YOUR FASTFETCH ALTERNATIVE)
-# ------------------------------------------------------------
-
-if [[ -f "$HOME/.config/kitty/startup-welcome.sh" ]]; then
-    bash "$HOME/.config/kitty/startup-welcome.sh"
+# Cache compdump and only run the slow security check once a day.
+if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
+    compinit
+else
+    compinit -C                        # Fast path: trust the cache
 fi
-# ============================================================
-#                  CYBERPUNK ZSH CONFIGURATION
-#         Ultra Clean • Sorted • Fully Commented Version
-# ============================================================
 
+zmodload zsh/complist
 
-# ------------------------------------------------------------
-# CORE ZSH OPTIONS
-# ------------------------------------------------------------
+# Case-insensitive + substring + dash/underscore-insensitive matching.
+zstyle ':completion:*' matcher-list \
+    'm:{a-zA-Z}={A-Za-z}' \
+    '+m:{[:lower:][:upper:]}={[:upper:][:lower:]}' \
+    '+m:{_-}={-_}'
 
-autoload -U colors && colors          # Enable terminal colors
-setopt PROMPT_SUBST                   # Allow variables inside PROMPT
+zstyle ':completion:*' menu select                # Arrow-key selectable menu
+zstyle ':completion:*' group-name ''              # Group results by type
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"   # Colorized list
+zstyle ':completion:*:descriptions' format '%F{141}%B%d%b%f'
+zstyle ':completion:*:warnings' format '%F{196}no matches%f'
 
-
-# ------------------------------------------------------------
-# HISTORY SETTINGS (PERSISTENT + SHARED + SMART)
-# ------------------------------------------------------------
-
-HISTFILE="$HOME/.zsh_history"         # History file location
-HISTSIZE=200000                       # Max lines kept in memory
-SAVEHIST=200000                       # Max lines saved to file
-
-setopt appendhistory                  # Append to history file
-setopt sharehistory                   # Share history between sessions
-setopt inc_append_history             # Write instantly
-setopt hist_ignore_all_dups           # Remove duplicates
-setopt hist_reduce_blanks             # Strip unnecessary spaces
-setopt hist_verify                    # Edit before executing
-setopt extended_history               # Save timestamps
-
-
-# ------------------------------------------------------------
-# EXTREME AUTOCOMPLETE ENGINE
-# ------------------------------------------------------------
-
-autoload -Uz compinit
-compinit -u                           # Fast, unsecure mode (faster startup)
-
-# Case-insensitive match (a = A)
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
-
-# Substring match (do → Downloads/Documents)
-zstyle ':completion:*' matcher-list '+m:{a-zA-Z}={A-Za-z}' '+m:{_-}={-_}'
-
-# Show a menu when multiple matches appear
-zstyle ':completion:*' menu select
-
-# Colorized completion list
-zstyle ':completion:*' list-colors ''
-
-# Group results by type (files, dirs, etc)
-zstyle ':completion:*' group-name ''
-
-setopt complete_in_word               # Complete in the middle of a typed word
+setopt complete_in_word               # Complete in the middle of a word
 setopt completealiases                # Allow completion after aliases
 
 
@@ -307,190 +99,369 @@ setopt completealiases                # Allow completion after aliases
 # AUTOSUGGESTIONS (SOFT GRAY GHOST TEXT)
 # ------------------------------------------------------------
 
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-
-ZSH_AUTOSUGGEST_STRATEGY=(history completion)   # Predict paths + old commands
+# Predict the highlight style *before* loading so it applies immediately.
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=50
-ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=245'        # Perfect light gray
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=245'
 
-# Prevent arrow-left from accepting suggestion
-bindkey '^[[D' backward-char
+_cp_source_first \
+    /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh \
+    "$HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
 
 
 # ------------------------------------------------------------
-# SYNTAX HIGHLIGHTING
+# CUSTOM KEY BINDINGS  (set before syntax-highlighting loads)
 # ------------------------------------------------------------
 
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+bindkey '^[[H'  beginning-of-line     # Home
+bindkey '^[[F'  end-of-line           # End
+bindkey '^[[3~' delete-char           # Delete
+bindkey '^[[1;5C' forward-word        # Ctrl+Right
+bindkey '^[[1;5D' backward-word       # Ctrl+Left
+bindkey '^[[D'  backward-char         # Left arrow never auto-accepts suggestion
+bindkey '^w' backward-kill-word       # Ctrl+W  delete word backward
+bindkey '^k' kill-line                # Ctrl+K  delete to end of line
+bindkey '^u' backward-kill-line       # Ctrl+U  delete line backward
 
-# ============================================
-# ZOXIDE — WARP-SPEED DIRECTORY JUMPING
-# ============================================
+# History substring search bound to Up/Down when the plugin is present.
+if _cp_source_first \
+    /usr/share/zsh/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh \
+    /usr/share/zsh-history-substring-search/zsh-history-substring-search.zsh \
+    /opt/homebrew/share/zsh-history-substring-search/zsh-history-substring-search.zsh; then
+    bindkey '^[[A' history-substring-search-up
+    bindkey '^[[B' history-substring-search-down
+fi
 
-# Initialize zoxide (smarter cd)
-eval "$(zoxide init zsh)"
 
-# Replace cd completely
-alias cd="z"
+# ------------------------------------------------------------
+# RESOLVE MODERN BINARY NAMES (Debian ships fdfind / batcat)
+# ------------------------------------------------------------
+# Needed by both the fzf-tab preview (below) and the FZF super-tab
+# section, so resolve them before either one builds its preview.
+_CP_FD=""
+if   _cp_has fd;     then _CP_FD="fd"
+elif _cp_has fdfind; then _CP_FD="fdfind"; fi
+
+_CP_BAT=""
+if   _cp_has bat;    then _CP_BAT="bat"
+elif _cp_has batcat; then _CP_BAT="batcat"; fi
 
 
-# ============================================
-# CYBERPUNK COMMAND EXECUTION ANIMATION
-# ============================================
+# ------------------------------------------------------------
+# FZF-TAB — fuzzy, previewable tab completion
+# ------------------------------------------------------------
+# Turns the completion menu into an fzf popup with live previews.
+# MUST load after compinit + autosuggestions and BEFORE syntax
+# highlighting. Installed to ~/.zsh/fzf-tab by the installer.
+if _cp_source_first \
+    /usr/share/zsh/plugins/fzf-tab/fzf-tab.plugin.zsh \
+    /usr/share/zsh-fzf-tab/fzf-tab.plugin.zsh \
+    /usr/local/share/fzf-tab/fzf-tab.plugin.zsh \
+    /opt/homebrew/share/fzf-tab/fzf-tab.plugin.zsh \
+    "$HOME/.zsh/fzf-tab/fzf-tab.plugin.zsh"; then
 
-SPINNER_FRAMES=("⠋" "⠙" "⠹" "⠸" "⠼" "⠴" "⠦" "⠧" "⠇" "⠏")
-SPINNER_PID=""
+    zstyle ':fzf-tab:*' fzf-flags \
+        --color=fg:#e0f0ff,hl:#00d4ff,fg+:#ffffff,hl+:#00ffff,info:#bd00ff,pointer:#ff00ff,marker:#00ff9f,prompt:#ff006e,border:#bd00ff
+    zstyle ':fzf-tab:*' fzf-pad 4
+    zstyle ':fzf-tab:*' continuous-trigger '/'
+    zstyle ':fzf-tab:*' switch-group ',' '.'
 
-# Start spinner before command execution
-preexec() {
-    timer=$(($(date +%s%N)/1000000))
-
-    (
-        i=0
-        while true; do
-            printf "\r${NEON_PINK}${SPINNER_FRAMES[i]}${RESET} "
-            i=$(( (i+1) % ${#SPINNER_FRAMES[@]} ))
-            sleep 0.08
-        done
-    ) &
-    SPINNER_PID=$!
-}
-
-# Kill spinner after execution and restore prompt
-precmd() {
-    if [[ -n "$SPINNER_PID" ]]; then
-        kill $SPINNER_PID 2>/dev/null
-        unset SPINNER_PID
-        printf "\r"
+    # Directory listing via eza, file preview via bat — graceful fallbacks.
+    _cp_ftls='ls -1'
+    _cp_has eza && _cp_ftls='eza -1 --color=always --icons'
+    if [[ -n "$_CP_BAT" ]]; then
+        _cp_ftprev="[[ -d \$realpath ]] && $_cp_ftls \$realpath || $_CP_BAT --color=always --style=plain \$realpath 2>/dev/null"
+    else
+        _cp_ftprev="[[ -d \$realpath ]] && $_cp_ftls \$realpath || cat \$realpath 2>/dev/null"
     fi
+    zstyle ':fzf-tab:complete:*:*' fzf-preview "$_cp_ftprev"
+fi
 
-    # Execution timer
-    if [ $timer ]; then
-        now=$(($(date +%s%N)/1000000))
-        elapsed=$(($now-$timer))
-        export RPROMPT="${DARK_GRAY}took ${elapsed}ms${RESET}"
-        unset timer
-    fi
-}
 
+# ------------------------------------------------------------
+# SYNTAX HIGHLIGHTING   (must be sourced LAST of the plugins)
+# ------------------------------------------------------------
+
+_cp_source_first \
+    /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+    /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+    /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+    /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh \
+    "$HOME/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 
 
 # ------------------------------------------------------------
 # FZF SUPER-TAB (FD + EZA + BAT PREVIEW)
 # ------------------------------------------------------------
+# (_CP_FD / _CP_BAT are resolved earlier, before the fzf-tab block.)
 
-[ -f /usr/share/fzf/completion.zsh ] && source /usr/share/fzf/completion.zsh
-[ -f /usr/share/fzf/key-bindings.zsh ] && source /usr/share/fzf/key-bindings.zsh
+if _cp_has fzf; then
+    _cp_source_first \
+        /usr/share/fzf/completion.zsh \
+        /usr/share/doc/fzf/examples/completion.zsh \
+        /opt/homebrew/opt/fzf/shell/completion.zsh
+    _cp_source_first \
+        /usr/share/fzf/key-bindings.zsh \
+        /usr/share/doc/fzf/examples/key-bindings.zsh \
+        /opt/homebrew/opt/fzf/shell/key-bindings.zsh
 
-export FZF_DEFAULT_COMMAND='fd --hidden --follow --exclude .git'
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-export FZF_ALT_C_COMMAND="fd --type d"
+    if [[ -n "$_CP_FD" ]]; then
+        export FZF_DEFAULT_COMMAND="$_CP_FD --hidden --follow --exclude .git"
+        export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+        export FZF_ALT_C_COMMAND="$_CP_FD --type d --hidden --follow --exclude .git"
+    fi
 
-export FZF_DEFAULT_OPTS="
- --height=80%
- --layout=reverse
- --border
- --preview 'bat --style=numbers --color=always {} || eza --color=always --icons -lah {}'
- --prompt='❯ '
-"
+    # Preview with bat for files, eza for directories — falling back gracefully.
+    # (top-level of .zshrc is not a function, so no `local` here)
+    _cp_preview='cat {}'
+    [[ -n "$_CP_BAT" ]] && _cp_preview="$_CP_BAT --style=numbers --color=always {}"
+    _cp_has eza && _cp_preview="$_cp_preview 2>/dev/null || eza --color=always --icons -lah {}"
 
-
-# ------------------------------------------------------------
-# CUSTOM KEY BINDINGS (QUALITY OF LIFE)
-# ------------------------------------------------------------
-
-bindkey '^[[H' beginning-of-line      # Home key
-bindkey '^[[F' end-of-line            # End key
-bindkey '^w' backward-kill-word       # Ctrl+W = delete word backward
-bindkey '^k' kill-line                # Ctrl+K = delete to end of line
-bindkey '^u' backward-kill-line       # Ctrl+U = delete line backward
-
-
-# ------------------------------------------------------------
-# CYBERPUNK PROMPT COLORS
-# ------------------------------------------------------------
-
-NEON_CYAN='%F{51}'
-NEON_PURPLE='%F{141}'
-DEEP_PURPLE='%F{135}'
-NEON_PINK='%F{201}'
-NEON_GREEN='%F{46}'
-NEON_YELLOW='%F{226}'
-CYBER_RED='%F{196}'
-DARK_GRAY='%F{240}'
-RESET='%f'
-BOLD='%B'
-UNBOLD='%b'
-
-# Colored tab menu
-zstyle ':completion:*:default' list-colors "${(s.:.)LS_COLORS}"
-
-# Selection highlight color
-zmodload zsh/complist
-zstyle ':completion:*' menu select=2
+    export FZF_DEFAULT_OPTS="
+     --height=80%
+     --layout=reverse
+     --border=rounded
+     --prompt='❯ '
+     --pointer='▶'
+     --marker='✓'
+     --color=fg:#e0f0ff,bg:-1,hl:#00d4ff
+     --color=fg+:#ffffff,bg+:#151920,hl+:#00ffff
+     --color=info:#bd00ff,prompt:#ff006e,pointer:#ff00ff
+     --color=marker:#00ff9f,spinner:#bd00ff,header:#4a5f7f
+     --preview '$_cp_preview'
+    "
+fi
 
 
-# ------------------------------------------------------------
-# GIT PROMPT INFORMATION
-# ------------------------------------------------------------
+# ============================================================
+# ATUIN — magical, searchable shell history
+# ============================================================
+# Owns Ctrl+R (full-screen fuzzy history with stats). Loaded after
+# fzf so it wins that binding; Up stays on substring search via
+# --disable-up-arrow. Absent? You keep fzf + substring search.
+if _cp_has atuin; then
+    eval "$(atuin init zsh --disable-up-arrow)"
+fi
 
-git_prompt_info() {
-    if git rev-parse --git-dir > /dev/null 2>&1; then
-        local branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
-        local status=$(git status --porcelain 2>/dev/null)
 
-        if [[ -n "$status" ]]; then
-            echo "${CYBER_RED}▓${RESET} ${NEON_YELLOW}${branch}${RESET} ${CYBER_RED}[±]${RESET}"
+# ============================================================
+# PROMPT — enhanced custom (default) or optional Starship
+# ============================================================
+# Pick the mode with CYBERPUNK_PROMPT=custom|starship, or persist
+# the choice in ~/.config/cyberpunk/prompt (the `cyber prompt`
+# helper writes it). Starship is used only when it's installed —
+# otherwise we always fall back to the custom prompt.
+
+_cp_prompt_mode="${CYBERPUNK_PROMPT:-}"
+[[ -z "$_cp_prompt_mode" && -r "$HOME/.config/cyberpunk/prompt" ]] && _cp_prompt_mode="$(<"$HOME/.config/cyberpunk/prompt")"
+[[ -z "$_cp_prompt_mode" ]] && _cp_prompt_mode="custom"
+
+if [[ "$_cp_prompt_mode" == "starship" ]] && _cp_has starship; then
+    # ---- Optional Starship prompt (cyberpunk preset) ----
+    [[ -r "$HOME/.config/cyberpunk/starship.toml" ]] && export STARSHIP_CONFIG="$HOME/.config/cyberpunk/starship.toml"
+    eval "$(starship init zsh)"
+else
+    # ========================================================
+    #  ENHANCED CUSTOM PROMPT
+    # ========================================================
+    autoload -Uz add-zsh-hook
+    # zsh/datetime → $EPOCHREALTIME · zsh/mathfunc → int() used by the timer.
+    zmodload zsh/datetime zsh/mathfunc 2>/dev/null
+
+    # ---- prompt colours ----
+    NEON_CYAN='%F{51}'
+    NEON_PURPLE='%F{141}'
+    DEEP_PURPLE='%F{135}'
+    NEON_PINK='%F{201}'
+    NEON_GREEN='%F{46}'
+    NEON_YELLOW='%F{226}'
+    CYBER_RED='%F{196}'
+    DARK_GRAY='%F{240}'
+    RESET='%f'
+    BOLD='%B'
+    UNBOLD='%b'
+
+    # ---- git segment: branch · ahead/behind · staged/dirty/untracked · stash ----
+    git_prompt_info() {
+        command -v git >/dev/null 2>&1 || return
+        git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return
+        local ref
+        ref=$(git symbolic-ref --short HEAD 2>/dev/null) || ref=$(git rev-parse --short HEAD 2>/dev/null)
+        [[ -z "$ref" ]] && return
+
+        local porcelain staged unstaged untracked stashed counts ahead="" behind=""
+        porcelain=$(git status --porcelain 2>/dev/null)
+        # One awk pass counts the three change categories.
+        read staged unstaged untracked <<< "$(print -r -- "$porcelain" | awk '
+            /^[MADRC]/ {s++} /^.[MD]/ {u++} /^\?\?/ {t++}
+            END {print s+0, u+0, t+0}')"
+        stashed=$(git stash list 2>/dev/null | wc -l | tr -d ' ')
+        if counts=$(git rev-list --left-right --count '@{u}...HEAD' 2>/dev/null); then
+            behind=${counts%%[[:space:]]*}
+            ahead=${counts##*[[:space:]]}
+        fi
+
+        local out="${DARK_GRAY}on${RESET} "
+        if [[ -z "$porcelain" ]]; then
+            out+="${NEON_GREEN}${RESET} ${NEON_CYAN}${ref}${RESET}"
         else
-            echo "${NEON_GREEN}▓${RESET} ${NEON_CYAN}${branch}${RESET} ${NEON_GREEN}[✓]${RESET}"
+            out+="${NEON_YELLOW}${RESET} ${NEON_YELLOW}${ref}${RESET}"
+        fi
+        [[ -n "$ahead"  ]] && (( ahead  > 0 )) && out+=" ${NEON_GREEN}⇡${ahead}${RESET}"
+        [[ -n "$behind" ]] && (( behind > 0 )) && out+=" ${NEON_PINK}⇣${behind}${RESET}"
+        (( staged    > 0 )) && out+=" ${NEON_GREEN}✚${staged}${RESET}"
+        (( unstaged  > 0 )) && out+=" ${CYBER_RED}✱${unstaged}${RESET}"
+        (( untracked > 0 )) && out+=" ${NEON_PURPLE}…${untracked}${RESET}"
+        (( stashed   > 0 )) && out+=" ${NEON_CYAN}⚑${stashed}${RESET}"
+        print -r -- "$out"
+    }
+
+    # ---- runtime/version segment (node/python/rust/go), cached per dir ----
+    runtime_prompt_info() {
+        [[ "${CYBERPUNK_RUNTIME:-1}" == 1 ]] || return
+        local seg=""
+        if [[ -f package.json || -f .nvmrc ]] && command -v node >/dev/null 2>&1; then
+            seg+=" ${NEON_GREEN}⬢ $(node -v 2>/dev/null)${RESET}"
+        fi
+        if [[ -f pyproject.toml || -f requirements.txt || -f setup.py || -n "${VIRTUAL_ENV:-}" ]] && command -v python3 >/dev/null 2>&1; then
+            seg+=" ${NEON_YELLOW} $(python3 -V 2>/dev/null | awk '{print $2}')${RESET}"
+        fi
+        if [[ -f Cargo.toml ]] && command -v rustc >/dev/null 2>&1; then
+            seg+=" ${CYBER_RED} $(rustc --version 2>/dev/null | awk '{print $2}')${RESET}"
+        fi
+        if [[ -f go.mod ]] && command -v go >/dev/null 2>&1; then
+            seg+=" ${NEON_CYAN} $(go version 2>/dev/null | awk '{print $3}' | sed 's/go//')${RESET}"
+        fi
+        print -r -- "$seg"
+    }
+    typeset -g _cp_runtime_seg="" _cp_runtime_pwd=""
+    _cp_update_runtime() {
+        [[ "$PWD" == "$_cp_runtime_pwd" ]] && return
+        _cp_runtime_pwd="$PWD"
+        _cp_runtime_seg="$(runtime_prompt_info)"
+    }
+    add-zsh-hook chpwd _cp_update_runtime
+    _cp_update_runtime
+
+    # ---- command execution timer (portable via zsh/datetime) ----
+    _cp_format_ms() {
+        local ms=$1
+        if   (( ms < 1000 ));  then printf '%dms' "$ms"
+        elif (( ms < 60000 )); then printf '%d.%01ds' $((ms/1000)) $(((ms%1000)/100))
+        else printf '%dm%02ds' $((ms/60000)) $(((ms%60000)/1000)); fi
+    }
+    _cp_timer_start() { _cp_timer=$EPOCHREALTIME; }
+    _cp_timer_stop() {
+        _cp_runtime=""
+        [[ -n "${_cp_timer:-}" ]] || return
+        local elapsed=$(( int((EPOCHREALTIME - _cp_timer) * 1000) ))
+        unset _cp_timer
+        (( elapsed >= 200 )) && _cp_runtime="${DARK_GRAY}󱎫 $(_cp_format_ms $elapsed)${RESET}"
+    }
+    add-zsh-hook preexec _cp_timer_start
+    add-zsh-hook precmd  _cp_timer_stop
+
+    # ---- the prompt ----
+    FULL_PROMPT='
+${DEEP_PURPLE}╭─${RESET}${NEON_PURPLE}▓▒░${RESET} ${BOLD}${NEON_CYAN}%n${RESET}${DARK_GRAY}@${RESET}${DEEP_PURPLE}%m${RESET} ${DARK_GRAY}in${RESET} ${NEON_YELLOW}%~${RESET} $(git_prompt_info)${_cp_runtime_seg}
+${DEEP_PURPLE}╰─${RESET}${NEON_PINK}❯${NEON_PURPLE}❯${NEON_CYAN}❯${RESET} '
+    # Right prompt: runtime + exit status (✓ / ✗ code) + clock.
+    FULL_RPROMPT='${_cp_runtime} %(?.${NEON_GREEN}✓${RESET}.${CYBER_RED}✗ %?${RESET}) ${DARK_GRAY}%D{%H:%M}${RESET}'
+    TRANSIENT_PROMPT='${NEON_PINK}❯${NEON_PURPLE}❯${NEON_CYAN}❯${RESET} '
+    PROMPT=$FULL_PROMPT
+    RPROMPT=$FULL_RPROMPT
+
+    # ---- transient prompt: past prompts collapse to a single glyph ----
+    # Keeps scrollback clean. Disable with CYBERPUNK_TRANSIENT=0.
+    # Uses the line-finish ZLE hook so it cooperates with the
+    # autosuggestions / syntax-highlighting accept-line wrappers
+    # instead of clobbering them.
+    if [[ "${CYBERPUNK_TRANSIENT:-1}" == 1 ]]; then
+        autoload -Uz add-zle-hook-widget
+        if (( $+functions[add-zle-hook-widget] )); then
+            _cp_transient() { PROMPT=$TRANSIENT_PROMPT; RPROMPT=''; zle reset-prompt; }
+            add-zle-hook-widget line-finish _cp_transient
+            _cp_restore_prompt() { PROMPT=$FULL_PROMPT; RPROMPT=$FULL_RPROMPT; }
+            add-zsh-hook precmd _cp_restore_prompt
         fi
     fi
-}
+fi
 
 
 # ------------------------------------------------------------
-# COMMAND EXECUTION TIMER (RIGHT SIDE)
+# ALIASES (COLOR + MODERN TOOLS, GUARDED)
 # ------------------------------------------------------------
 
-preexec() { timer=$(($(date +%s%N)/1000000)); }
+if _cp_has eza; then
+    alias ls='eza --icons --color=always --group-directories-first'
+    alias ll='eza -lah --icons --group-directories-first'
+    alias la='eza -a --icons --group-directories-first'
+    alias lt='eza --tree --level=2 --icons'
+    alias tree='eza --tree --icons'
+else
+    alias ls='ls --color=auto'
+    alias ll='ls -lah --color=auto'
+fi
 
-precmd() {
-    if [ $timer ]; then
-        now=$(($(date +%s%N)/1000000))
-        elapsed=$(($now-$timer))
-        RPROMPT="${DARK_GRAY}took ${elapsed}ms${RESET}"
-        unset timer
-    fi
-}
+[[ -n "$_CP_BAT" ]] && alias cat="$_CP_BAT --paging=never"
+[[ "$_CP_FD" == "fdfind" ]] && alias fd='fdfind'
+_cp_has nvim && alias vim='nvim'
 
-
-# ------------------------------------------------------------
-# CYBERPUNK PROMPT (YOUR ORIGINAL STYLE)
-# ------------------------------------------------------------
-
-PROMPT='
-${DEEP_PURPLE}╭─${RESET}${NEON_PURPLE}▓▒░${RESET} ${BOLD}${NEON_CYAN}%n${RESET}${DARK_GRAY}@${RESET}${DEEP_PURPLE}%m${RESET} ${DARK_GRAY}in${RESET} ${NEON_YELLOW}%~${RESET} $(git_prompt_info)
-${DEEP_PURPLE}╰─${RESET}${NEON_PINK}❯${NEON_PURPLE}❯${NEON_CYAN}❯${RESET} '
-
-RPROMPT='${DARK_GRAY}%*${RESET} %(?.${NEON_GREEN}✓.${CYBER_RED}✗ %?)${RESET}'
-
-
-# ------------------------------------------------------------
-# ALIASES (COLOR + MODERN TOOLS)
-# ------------------------------------------------------------
-
-alias ls='eza --icons --color=always'
-alias ll='eza -lah --icons'
-alias tree='eza --tree --icons'
-alias cat='bat'
-alias vim='nvim'
 alias grep='grep --color=auto'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias df='df -h'
+alias free='free -h'
+alias mkdir='mkdir -p'
+alias gs='git status -sb'
+alias gl='git log --oneline --graph --decorate -20'
+
+# Modern TUI tools — aliased only when installed.
+_cp_has lazygit   && alias lg='lazygit'
+_cp_has btop      && { alias top='btop'; alias btm='btop'; }
+_cp_has fastfetch && alias fetch='fastfetch'
+_cp_has glow      && alias md='glow'
+_cp_has yazi      && alias fm='yazi'
+# Open a ready-made kitty dev layout (editor | shell | monitor).
+alias kdev='kitty --session "$HOME/.config/kitty/sessions/dev.session"'
 
 
 # ------------------------------------------------------------
-# CUSTOM WELCOME SCREEN (YOUR FASTFETCH ALTERNATIVE)
+# HELPER FUNCTIONS  (mkcd · extract · up · y · proj · cyber)
 # ------------------------------------------------------------
+_cp_source_first \
+    "$HOME/.config/cyberpunk/functions.zsh" \
+    "${ZDOTDIR:-$HOME}/.cyberpunk-functions.zsh"
 
-if [[ -f "$HOME/.config/kitty/startup-welcome.sh" ]]; then
-    bash "$HOME/.config/kitty/startup-welcome.sh"
+
+# ============================================================
+# ZOXIDE — WARP-SPEED DIRECTORY JUMPING
+# ============================================================
+# Initialised last (after every hook above) as zoxide recommends,
+# so its directory tracking sees a fully-configured shell.
+if _cp_has zoxide; then
+    eval "$(zoxide init zsh)"
+    alias cd="z"                      # Replace cd with smart jumping
+fi
+
+
+# ------------------------------------------------------------
+# CUSTOM WELCOME SCREEN (FASTFETCH ALTERNATIVE)
+# ------------------------------------------------------------
+# Welcome-screen toggles — uncomment to customise (see the script
+# header for the full list):
+#   export CYB_ANIMATE=0      # skip the boot + reveal animation
+#   export CYB_WEATHER=1      # show weather (cached)
+#   export CYB_TODOS=1        # show ~/.config/cyberpunk/todo.txt
+# Only on the first interactive shell of a window, never inside
+# editors, scripts, SSH-forced commands or non-interactive shells.
+
+if [[ -o interactive && -z "${CYBERPUNK_WELCOME_SHOWN:-}" && -t 1 ]]; then
+    export CYBERPUNK_WELCOME_SHOWN=1
+    if [[ -f "$HOME/.config/kitty/startup-welcome.sh" ]]; then
+        bash "$HOME/.config/kitty/startup-welcome.sh"
+    fi
 fi

@@ -1,151 +1,321 @@
 #!/usr/bin/env bash
+# ============================================================
+#   ⚡ CYBERPUNK WELCOME DASHBOARD
+# ------------------------------------------------------------
+#  A neon, animated system dashboard shown once per terminal
+#  window (the guard lives in .zshrc). Everything below is
+#  toggle-able with environment variables so you can dial the
+#  intensity up or down — set them in ~/.zshrc before this runs.
+#
+#    CYB_ANIMATE=0          # disable the boot + reveal animation
+#    CYB_REVEAL_DELAY=0.03  # per-line reveal delay (seconds)
+#    CYB_GIT=0              # hide the git panel
+#    CYB_NET=0             # hide the network panel
+#    CYB_WEATHER=1         # show weather (network; cached ~3h)
+#    CYB_WEATHER_LOCATION="Tehran"   # blank = auto-detect
+#    CYB_TODOS=1           # show todos from CYB_TODO_FILE
+#    CYB_IMAGE=1           # show an image logo (icat) instead of ASCII
+# ============================================================
 
-# === CYBERPUNK NEON COLORS ===
-NEON_CYAN='\033[38;5;51m'
-NEON_PURPLE='\033[38;5;141m'
-DEEP_PURPLE='\033[38;5;135m'
-NEON_PINK='\033[38;5;201m'
-NEON_GREEN='\033[38;5;46m'
-ELECTRIC_BLUE='\033[38;5;39m'
-NEON_YELLOW='\033[38;5;226m'
-CYBER_RED='\033[38;5;196m'
-DARK_GRAY='\033[38;5;240m'
-BOLD='\033[1m'
-DIM='\033[2m'
-ITALIC='\033[3m'
-RESET='\033[0m'
+# ------------------------------------------------------------
+#  TOGGLES (override from the environment)
+# ------------------------------------------------------------
+CYB_ANIMATE="${CYB_ANIMATE:-1}"
+CYB_REVEAL_DELAY="${CYB_REVEAL_DELAY:-0.012}"
+CYB_BOOT="${CYB_BOOT:-1}"
+CYB_GIT="${CYB_GIT:-1}"
+CYB_NET="${CYB_NET:-1}"
+CYB_WEATHER="${CYB_WEATHER:-0}"
+CYB_WEATHER_LOCATION="${CYB_WEATHER_LOCATION:-}"
+CYB_TODOS="${CYB_TODOS:-0}"
+CYB_TODO_FILE="${CYB_TODO_FILE:-$HOME/.config/cyberpunk/todo.txt}"
+CYB_IMAGE="${CYB_IMAGE:-0}"
+CYB_IMAGE_FILE="${CYB_IMAGE_FILE:-$HOME/.config/cyberpunk/logo.png}"
 
-# === ANIMATIONS & EFFECTS ===
-GLITCH_CHARS=("▓" "▒" "░" "▀" "▄" "█")
+# No animation when output isn't an interactive terminal.
+[[ -t 1 ]] || { CYB_ANIMATE=0; CYB_BOOT=0; }
+[[ "$CYB_ANIMATE" == 1 ]] || CYB_REVEAL_DELAY=0
 
-# === CLEAR SCREEN ===
+# ------------------------------------------------------------
+#  PALETTE (shared with the rest of the setup, with a fallback)
+# ------------------------------------------------------------
+_cyb_load_palette() {
+    local c _self_dir
+    _self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+    for c in "${CYB_PALETTE:-}" \
+             "$HOME/.config/cyberpunk/palette.sh" \
+             "$_self_dir/palette.sh" \
+             "$_self_dir/../theme/palette.sh"; do
+        [[ -n "$c" && -r "$c" ]] && { . "$c"; return 0; }
+    done
+    return 1
+}
+if ! _cyb_load_palette; then
+    # Minimal inline fallback so the script always runs.
+    CYB_CYAN=$'\033[38;5;51m';  CYB_CYAN_BRIGHT=$'\033[38;5;51m'
+    CYB_PURPLE=$'\033[38;5;135m'; CYB_PURPLE_SOFT=$'\033[38;5;141m'
+    CYB_PINK=$'\033[38;5;198m'; CYB_MAGENTA=$'\033[38;5;201m'
+    CYB_GREEN=$'\033[38;5;48m';  CYB_GREEN_BRIGHT=$'\033[38;5;46m'
+    CYB_YELLOW=$'\033[38;5;226m'; CYB_RED=$'\033[38;5;203m'
+    CYB_GRAY=$'\033[38;5;240m'; CYB_FG=$'\033[38;5;255m'
+    CYB_BOLD=$'\033[1m'; CYB_DIM=$'\033[2m'; CYB_ITALIC=$'\033[3m'; CYB_RESET=$'\033[0m'
+    CYB_GRAD_START=(0 212 255); CYB_GRAD_MID=(162 119 255); CYB_GRAD_END=(255 0 110)
+    cyb_gradient() { printf '%s%s%s' "$CYB_CYAN" "$1" "$CYB_RESET"; }
+fi
+
+# ------------------------------------------------------------
+#  CLEAR
+# ------------------------------------------------------------
 clear
 kitty +kitten icat --clear 2>/dev/null
-sleep 0.05
 
-# === GET TERMINAL SIZE ===
-COLS=$(tput cols)
-LINES=$(tput lines)
+# ------------------------------------------------------------
+#  TERMINAL SIZE + LEFT PADDING
+# ------------------------------------------------------------
+COLS=$(tput cols 2>/dev/null || echo 80)
+LINES=$(tput lines 2>/dev/null || echo 24)
+LEFT_COLS=$(( COLS * 5 / 100 ))
+SPACES=$(printf "%*s" "$LEFT_COLS" "")
 
-# === GATHER SYSTEM INFO ===
-UPTIME=$(uptime -p | sed 's/up //')
-KERNEL=$(uname -r)
-DISTRO=$(grep PRETTY_NAME /etc/os-release | cut -d= -f2- | tr -d '"')
-SHELL_NAME=$(basename "$SHELL")
-MEM_USED=$(free -h | awk '/Mem/ {print $3}')
-MEM_TOTAL=$(free -h | awk '/Mem/ {print $2}')
-MEM_PERCENT=$(free | awk '/Mem/ {printf "%.0f", $3/$2 * 100}')
-PACKAGES=$(pacman -Q 2>/dev/null | wc -l)
-GPU=$(lspci 2>/dev/null | grep -E "VGA|3D" | cut -d: -f3- | sed 's/^ *//' | head -n1)
-HOSTNAME=$(hostname)
-USER=$(whoami)
-DATE=$(date '+%A, %B %d %Y')
-TIME=$(date '+%H:%M:%S')
-LOAD=$(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}' | tr -d ',')
+# ------------------------------------------------------------
+#  HELPERS
+# ------------------------------------------------------------
+# Print a pre-rendered line, then pause briefly for the reveal effect.
+reveal() {
+    printf '%s\n' "$1"
+    [[ "$CYB_REVEAL_DELAY" != 0 ]] && sleep "$CYB_REVEAL_DELAY" 2>/dev/null
+    return 0
+}
 
-# === COMPUTE PADDING ===
-TEXT_START_PERCENT=5
-LEFT_COLS=$(( COLS * TEXT_START_PERCENT / 100 ))
-SPACES=$(printf "%*s" $LEFT_COLS)
+# Linear interpolate between two ints by i/(n-1).
+_lerp() { local a=$1 b=$2 i=$3 n=$4; (( n <= 1 )) && n=2; echo $(( a + (b - a) * i / (n - 1) )); }
 
-# === PROGRESS BAR FUNCTION ===
+# Coloured usage bar: green < 50, yellow < 80, red otherwise.
 draw_bar() {
-    local percent=$1
-    local width=20
-    local filled=$(( percent * width / 100 ))
-    local empty=$(( width - filled ))
+    local percent=${1:-0} width=18 i bar=""
+    local filled=$(( percent * width / 100 )); (( filled > width )) && filled=$width
+    for ((i=0; i<filled; i++));        do bar+="█"; done
+    for ((i=filled; i<width; i++));     do bar+="░"; done
+    local col="$CYB_GREEN"
+    (( percent >= 50 )) && col="$CYB_YELLOW"
+    (( percent >= 80 )) && col="$CYB_RED"
+    printf '%s%s%s %s%d%%%s' "$col" "$bar" "$CYB_RESET" "$CYB_GRAY" "$percent" "$CYB_RESET"
+}
 
-    local bar=""
-    for ((i=0; i<filled; i++)); do
-        bar+="█"
-    done
-    for ((i=0; i<empty; i++)); do
-        bar+="░"
-    done
-
-    if [ $percent -lt 50 ]; then
-        echo -e "${NEON_GREEN}${bar}${RESET}"
-    elif [ $percent -lt 80 ]; then
-        echo -e "${NEON_YELLOW}${bar}${RESET}"
+# A labelled info row: icon · label │ value [bar]
+info_row() {
+    local icon=$1 label=$2 value=$3 color=$4 extra=$5
+    if [[ -n "$extra" ]]; then
+        reveal "${SPACES}  ${color}${icon}${CYB_RESET} ${CYB_BOLD}${label}${CYB_RESET} ${CYB_PURPLE}│${CYB_RESET} ${value}  ${extra}"
     else
-        echo -e "${CYBER_RED}${bar}${RESET}"
+        reveal "${SPACES}  ${color}${icon}${CYB_RESET} ${CYB_BOLD}${label}${CYB_RESET} ${CYB_PURPLE}│${CYB_RESET} ${value}"
     fi
 }
 
-# === GLITCH EFFECT LINE ===
-glitch_line() {
-    local width=${1:-50}
-    local line=""
-    for ((i=0; i<width; i++)); do
-        local rand=$((RANDOM % 10))
-        if [ $rand -lt 2 ]; then
-            line+="${NEON_PURPLE}${GLITCH_CHARS[$((RANDOM % 6))]}${RESET}"
-        else
-            line+="${DARK_GRAY}─${RESET}"
-        fi
+rule_top()    { reveal "${SPACES}${CYB_PURPLE_SOFT}╭───────────────────────────────────────────────────────────╮${CYB_RESET}"; }
+rule_mid()    { reveal "${SPACES}${CYB_PURPLE_SOFT}├───────────────────────────────────────────────────────────┤${CYB_RESET}"; }
+rule_bottom() { reveal "${SPACES}${CYB_PURPLE_SOFT}╰───────────────────────────────────────────────────────────╯${CYB_RESET}"; }
+
+# ------------------------------------------------------------
+#  BOOT SEQUENCE (animation only)
+# ------------------------------------------------------------
+boot_sequence() {
+    [[ "$CYB_ANIMATE" == 1 && "$CYB_BOOT" == 1 ]] || return 0
+    local steps=("initializing neural interface" "establishing secure uplink" "decrypting session keys")
+    local s
+    printf '\n'
+    for s in "${steps[@]}"; do
+        printf '%s  %s▸%s %s%s%s' "$SPACES" "$CYB_PURPLE" "$CYB_RESET" "$CYB_GRAY" "$s" "$CYB_RESET"
+        sleep 0.06 2>/dev/null
+        printf ' %s…%s' "$CYB_DIM" "$CYB_RESET"
+        sleep 0.04 2>/dev/null
+        printf ' %s✓%s\n' "$CYB_GREEN" "$CYB_RESET"
     done
-    echo -e "$line"
+    sleep 0.07 2>/dev/null
+    clear
 }
 
-# === FANCY HEADER ===
-print_header() {
-    echo -e "${SPACES}${NEON_CYAN}${BOLD}"
-    echo "${SPACES}    ████████╗██╗██████╗ ███████╗██████╗ ██████╗  ██████╗ ██╗   ██╗"
-    echo "${SPACES}    ╚══██╔══╝██║██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔═══██╗╚██╗ ██╔╝"
-    echo "${SPACES}       ██║   ██║██████╔╝█████╗  ██║  ██║██████╔╝██║   ██║ ╚████╔╝ "
-    echo "${SPACES}       ██║   ██║██╔══██╗██╔══╝  ██║  ██║██╔══██╗██║   ██║  ╚██╔╝  "
-    echo "${SPACES}       ██║   ██║██║  ██║███████╗██████╔╝██████╔╝╚██████╔╝   ██║   "
-    echo -e "${SPACES}       ╚═╝   ╚═╝╚═╝  ╚═╝╚══════╝╚═════╝ ╚═════╝  ╚═════╝    ╚═╝${RESET}"
-}
+# ------------------------------------------------------------
+#  LOGO (gradient ASCII, or an image when CYB_IMAGE=1)
+# ------------------------------------------------------------
+LOGO=(
+"    ████████╗██╗██████╗ ███████╗██████╗ ██████╗  ██████╗ ██╗   ██╗"
+"    ╚══██╔══╝██║██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔═══██╗╚██╗ ██╔╝"
+"       ██║   ██║██████╔╝█████╗  ██║  ██║██████╔╝██║   ██║ ╚████╔╝ "
+"       ██║   ██║██╔══██╗██╔══╝  ██║  ██║██╔══██╗██║   ██║  ╚██╔╝  "
+"       ██║   ██║██║  ██║███████╗██████╔╝██████╔╝╚██████╔╝   ██║   "
+"       ╚═╝   ╚═╝╚═╝  ╚═╝╚══════╝╚═════╝ ╚═════╝  ╚═════╝    ╚═╝   "
+)
 
-# === NEURAL NETWORK ANIMATION ===
-print_neural_border() {
-    echo -e "${SPACES}${NEON_PURPLE}╔═══════════════════════════════════════════════════════╗${RESET}"
-}
-
-print_neural_footer() {
-    echo -e "${SPACES}${NEON_PURPLE}╚═══════════════════════════════════════════════════════╝${RESET}"
-}
-
-# === FANCY INFO WITH ICONS ===
-print_fancy_info() {
-    local icon=$1
-    local label=$2
-    local value=$3
-    local color=$4
-    local bar=$5
-
-    if [ -n "$bar" ]; then
-        echo -e "${SPACES}  ${color}${icon}${RESET} ${BOLD}${label}${RESET} ${NEON_PURPLE}│${RESET} ${value} ${bar}"
-    else
-        echo -e "${SPACES}  ${color}${icon}${RESET} ${BOLD}${label}${RESET} ${NEON_PURPLE}│${RESET} ${value}"
+print_logo() {
+    if [[ "$CYB_IMAGE" == 1 && -r "$CYB_IMAGE_FILE" ]] && command -v kitty >/dev/null 2>&1; then
+        printf '%s' "$SPACES"
+        kitty +kitten icat --align left "$CYB_IMAGE_FILE" 2>/dev/null && return 0
     fi
+    local n=${#LOGO[@]} i sr sg sb er eg eb
+    printf '%s' "$CYB_BOLD"
+    for (( i=0; i<n; i++ )); do
+        # Diagonal blend: line start cyan→purple, line end purple→pink.
+        sr=$(_lerp "${CYB_GRAD_START[0]}" "${CYB_GRAD_MID[0]}" "$i" "$n")
+        sg=$(_lerp "${CYB_GRAD_START[1]}" "${CYB_GRAD_MID[1]}" "$i" "$n")
+        sb=$(_lerp "${CYB_GRAD_START[2]}" "${CYB_GRAD_MID[2]}" "$i" "$n")
+        er=$(_lerp "${CYB_GRAD_MID[0]}" "${CYB_GRAD_END[0]}" "$i" "$n")
+        eg=$(_lerp "${CYB_GRAD_MID[1]}" "${CYB_GRAD_END[1]}" "$i" "$n")
+        eb=$(_lerp "${CYB_GRAD_MID[2]}" "${CYB_GRAD_END[2]}" "$i" "$n")
+        reveal "${SPACES}$(cyb_gradient "${LOGO[i]}" "$sr" "$sg" "$sb" "$er" "$eg" "$eb")"
+    done
+    printf '%s' "$CYB_RESET"
 }
 
-# === MAIN DISPLAY ===
+# ------------------------------------------------------------
+#  GATHER SYSTEM INFO (portable: Linux + macOS)
+# ------------------------------------------------------------
+SHELL_NAME=$(basename "${SHELL:-sh}")
+HOST=$(hostname 2>/dev/null || uname -n)
+WHO=$(whoami)
+TIME=$(date '+%H:%M:%S')
+
+UPTIME=$(uptime -p 2>/dev/null | sed 's/up //')
+[[ -z "$UPTIME" ]] && UPTIME=$(uptime 2>/dev/null | sed -E 's/.*up *([^,]*),.*/\1/' | sed 's/^ *//')
+
+KERNEL=$(uname -r)
+
+if [[ -r /etc/os-release ]]; then
+    DISTRO=$(. /etc/os-release; echo "${PRETTY_NAME:-$NAME}")
+elif [[ "$(uname)" == "Darwin" ]]; then
+    DISTRO="macOS $(sw_vers -productVersion 2>/dev/null)"
+else
+    DISTRO=$(uname -s)
+fi
+
+# CPU model.
+CPU=$(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo 2>/dev/null)
+[[ -z "$CPU" ]] && CPU=$(sysctl -n machdep.cpu.brand_string 2>/dev/null)
+[[ -z "$CPU" ]] && CPU=$(uname -p 2>/dev/null)
+CPU=$(echo "$CPU" | sed -E 's/\(R\)|\(TM\)|CPU|Processor//g; s/  +/ /g; s/^ *//; s/ *$//')
+
+# Memory.
+if command -v free >/dev/null 2>&1; then
+    MEM_USED=$(free -h | awk '/Mem/ {print $3}')
+    MEM_TOTAL=$(free -h | awk '/Mem/ {print $2}')
+    MEM_PERCENT=$(free | awk '/Mem/ {printf "%.0f", $3/$2 * 100}')
+else
+    MEM_USED="?"; MEM_TOTAL="?"; MEM_PERCENT=0
+fi
+
+# Disk usage of /.
+DISK_LINE=$(df -h / 2>/dev/null | awk 'NR==2')
+DISK_USED=$(awk '{print $3}' <<< "$DISK_LINE")
+DISK_TOTAL=$(awk '{print $2}' <<< "$DISK_LINE")
+DISK_PERCENT=$(awk '{gsub(/%/,"",$5); print $5+0}' <<< "$DISK_LINE")
+
+# Package count.
+if   command -v pacman      >/dev/null 2>&1; then PACKAGES=$(pacman -Qq 2>/dev/null | wc -l)
+elif command -v dpkg-query  >/dev/null 2>&1; then PACKAGES=$(dpkg-query -f '.\n' -W 2>/dev/null | wc -l)
+elif command -v rpm         >/dev/null 2>&1; then PACKAGES=$(rpm -qa 2>/dev/null | wc -l)
+elif command -v brew        >/dev/null 2>&1; then PACKAGES=$(brew list 2>/dev/null | wc -l)
+else PACKAGES="?"; fi
+PACKAGES=$(echo "$PACKAGES" | tr -d ' ')
+
+# Load average (1-min).
+LOAD=$(uptime 2>/dev/null | sed -E 's/.*load average[s]?: *//' | awk -F',' '{gsub(/ /,"",$1); print $1}')
+
+# GPU (optional).
+GPU=$(lspci 2>/dev/null | grep -E "VGA|3D|Display" | cut -d: -f3- | sed 's/^ *//' | head -n1)
+
+# Network: local IP + Wi-Fi SSID.
+IP=""
+if command -v ip >/dev/null 2>&1; then
+    IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
+fi
+[[ -z "$IP" ]] && IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+[[ -z "$IP" ]] && IP=$(ipconfig getifaddr en0 2>/dev/null)
+SSID=$(iwgetid -r 2>/dev/null)
+[[ -z "$SSID" ]] && SSID=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | awk -F: '/^yes/{print $2; exit}')
+
+# ------------------------------------------------------------
+#  RENDER
+# ------------------------------------------------------------
+boot_sequence
+
 echo ""
-print_header
+print_logo
 echo ""
 
-# User info with fancy styling
-echo -e "${SPACES}  ${NEON_PURPLE}─${NEON_PINK}◆${RESET} ${DARK_GRAY}${TIME}${RESET} ${DARK_GRAY}//${RESET} ${DIM}${ITALIC}uptime: ${UPTIME}${RESET}"
+# Identity / clock line.
+reveal "${SPACES}  ${CYB_PURPLE}─${CYB_PINK}◆${CYB_RESET} ${CYB_GRAY}${TIME}${CYB_RESET} ${CYB_GRAY}//${CYB_RESET} ${CYB_DIM}${CYB_ITALIC}uptime: ${UPTIME}${CYB_RESET}"
 echo ""
 
-print_neural_border
+# ---- System panel ----
+rule_top
+info_row ""  "USER  " "${CYB_FG}${WHO}${CYB_GRAY}@${CYB_FG}${HOST}${CYB_RESET}" "$CYB_PINK"
+info_row "🐧"  "OS    " "$DISTRO" "$CYB_CYAN"
+info_row ""  "KERNEL" "$KERNEL" "$CYB_PURPLE_SOFT"
+info_row "🐚"  "SHELL " "$SHELL_NAME" "$CYB_CYAN_BRIGHT"
+[[ -n "$CPU"      ]] && info_row ""  "CPU   " "${CPU:0:42}" "$CYB_GREEN_BRIGHT"
+[[ "$PACKAGES" != "?" ]] && info_row ""  "PKGS  " "$PACKAGES" "$CYB_GREEN"
+info_row "󰍛"  "MEM   " "${MEM_USED} / ${MEM_TOTAL}" "$CYB_YELLOW" "$(draw_bar "$MEM_PERCENT")"
+[[ -n "$DISK_TOTAL" ]] && info_row "" "DISK  " "${DISK_USED} / ${DISK_TOTAL}" "$CYB_PURPLE" "$(draw_bar "${DISK_PERCENT:-0}")"
+info_row "󰓅"  "LOAD  " "$LOAD" "$CYB_GREEN"
+[[ -n "$GPU" ]] && info_row "󰢮" "GPU   " "${GPU:0:42}" "$CYB_RED"
 
-# System info with progress bars
-print_fancy_info "🐧" "OS     " "$DISTRO" "$ELECTRIC_BLUE"
-print_fancy_info "🐚" "SHELL  " "$SHELL_NAME" "$NEON_CYAN"
-print_fancy_info "󰍛" "MEMORY  " "${MEM_USED} / ${MEM_TOTAL}" "$NEON_YELLOW" "$(draw_bar $MEM_PERCENT)"
-print_fancy_info "󰓅" "LOAD    " "$LOAD" "$NEON_GREEN"
-[[ -n "$GPU" ]] && print_fancy_info "󰢮" "GPU     " "${GPU:0:50}" "$CYBER_RED"
+# ---- Network panel ----
+if [[ "$CYB_NET" == 1 && ( -n "$IP" || -n "$SSID" ) ]]; then
+    rule_mid
+    [[ -n "$IP"   ]] && info_row "" "IP    " "$IP" "$CYB_CYAN"
+    [[ -n "$SSID" ]] && info_row "" "WIFI  " "$SSID" "$CYB_CYAN_BRIGHT"
+fi
 
-print_neural_footer
+# ---- Git panel (only inside a repository) ----
+if [[ "$CYB_GIT" == 1 ]] && command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    G_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+    G_DIRTY=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+    G_AHEAD=0; G_BEHIND=0
+    if G_COUNTS=$(git rev-list --left-right --count '@{u}...HEAD' 2>/dev/null); then
+        G_BEHIND=$(awk '{print $1}' <<< "$G_COUNTS")
+        G_AHEAD=$(awk '{print $2}' <<< "$G_COUNTS")
+    fi
+    G_LAST=$(git log -1 --pretty='%s' 2>/dev/null)
+    if [[ -n "$G_BRANCH" ]]; then
+        rule_mid
+        G_STATE="${CYB_GREEN}clean ✓${CYB_RESET}"
+        (( G_DIRTY > 0 )) && G_STATE="${CYB_RED}${G_DIRTY} changed ±${CYB_RESET}"
+        G_SYNC=""
+        (( G_AHEAD  > 0 )) && G_SYNC+=" ${CYB_GREEN}⇡${G_AHEAD}${CYB_RESET}"
+        (( G_BEHIND > 0 )) && G_SYNC+=" ${CYB_YELLOW}⇣${G_BEHIND}${CYB_RESET}"
+        info_row "" "GIT   " "${CYB_CYAN}${G_BRANCH}${CYB_RESET}${G_SYNC}  ${G_STATE}" "$CYB_PURPLE"
+        [[ -n "$G_LAST" ]] && info_row "" "LAST  " "${CYB_DIM}${G_LAST:0:42}${CYB_RESET}" "$CYB_GRAY"
+    fi
+fi
+
+# ---- Weather panel (optional, cached) ----
+if [[ "$CYB_WEATHER" == 1 ]] && command -v curl >/dev/null 2>&1; then
+    W_CACHE="${TMPDIR:-/tmp}/cyberpunk-weather-$WHO"
+    if [[ ! -s "$W_CACHE" ]] || find "$W_CACHE" -mmin +180 >/dev/null 2>&1; then
+        curl -fsS --max-time 2 "https://wttr.in/${CYB_WEATHER_LOCATION}?format=%c+%t+%C+%l" -o "$W_CACHE" 2>/dev/null || true
+    fi
+    W=$(tr -d '\n' < "$W_CACHE" 2>/dev/null)
+    if [[ -n "$W" ]]; then
+        rule_mid
+        info_row "" "WTHR  " "$W" "$CYB_YELLOW"
+    fi
+fi
+
+# ---- Todos panel (optional) ----
+if [[ "$CYB_TODOS" == 1 && -r "$CYB_TODO_FILE" ]]; then
+    rule_mid
+    reveal "${SPACES}  ${CYB_PINK}${CYB_RESET} ${CYB_BOLD}TODO${CYB_RESET}"
+    while IFS= read -r line && [[ -n "$line" ]]; do
+        reveal "${SPACES}    ${CYB_GRAY}▸${CYB_RESET} ${line}"
+    done < <(grep -v '^[[:space:]]*$' "$CYB_TODO_FILE" 2>/dev/null | head -n 4)
+fi
+
+rule_bottom
 echo ""
 
-echo ""
-
-# Random cyberpunk quote
+# ------------------------------------------------------------
+#  RANDOM CYBERPUNK QUOTE
+# ------------------------------------------------------------
 QUOTES=(
     "The future is already here — it's just not evenly distributed."
     "In the digital world, you are what you share."
@@ -154,10 +324,10 @@ QUOTES=(
     "Information wants to be free."
     "The best way to predict the future is to build it."
     "First solve the problem. Then write the code."
-    "Your mind is your greatest piece of technology—upgrade it often."
+    "Your mind is your greatest piece of technology — upgrade it often."
     "Innovation is the art of turning 'what if' into 'what is'."
-    "Dreams don’t work unless you do."
-    "If it doesn’t challenge you, it won’t change you."
+    "Dreams don't work unless you do."
+    "If it doesn't challenge you, it won't change you."
     "Every great idea looks like a glitch before it becomes an upgrade."
     "Stay curious — it's the most powerful skill in the age of AI."
     "Code is poetry written in logic."
@@ -168,10 +338,9 @@ QUOTES=(
     "Even the strongest signal starts as noise."
     "You are one decision away from a completely different life."
     "Build something today that your future self will thank you for."
-    "The tools don’t make the creator — the vision does."
+    "The tools don't make the creator — the vision does."
     "Greatness is a series of small, intelligent choices."
 )
-
 RANDOM_QUOTE=${QUOTES[$RANDOM % ${#QUOTES[@]}]}
-echo -e "${SPACES}  ${DARK_GRAY}>${RESET} ${ITALIC}${DIM}${RANDOM_QUOTE}${RESET}"
+reveal "${SPACES}  ${CYB_GRAY}>${CYB_RESET} ${CYB_ITALIC}${CYB_DIM}${RANDOM_QUOTE}${CYB_RESET}"
 echo ""
