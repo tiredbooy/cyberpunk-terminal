@@ -181,6 +181,7 @@ UPTIME=$(uptime -p 2>/dev/null | sed 's/up //')
 KERNEL=$(uname -r)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # System info with progress bars
 print_fancy_info "" "USER   " "${USER}@${HOSTNAME}" "$NEON_PINK"
 print_fancy_info "🐧" "OS     " "$DISTRO" "$ELECTRIC_BLUE"
@@ -191,6 +192,8 @@ print_fancy_info "󰍛" "MEMORY " "${MEM_USED} / ${MEM_TOTAL}" "$NEON_YELLOW" "$
 print_fancy_info "󰓅" "LOAD   " "$LOAD" "$NEON_GREEN"
 [[ -n "$GPU" ]] && print_fancy_info "󰢮" "GPU    " "${GPU:0:50}" "$CYBER_RED"
 =======
+=======
+>>>>>>> test
 if [[ -r /etc/os-release ]]; then
     DISTRO=$(. /etc/os-release; echo "${PRETTY_NAME:-$NAME}")
 elif [[ "$(uname)" == "Darwin" ]]; then
@@ -198,7 +201,10 @@ elif [[ "$(uname)" == "Darwin" ]]; then
 else
     DISTRO=$(uname -s)
 fi
+<<<<<<< HEAD
 >>>>>>> eb5ce91 (updated the terminal ui)
+=======
+>>>>>>> test
 
 # CPU model.
 CPU=$(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo 2>/dev/null)

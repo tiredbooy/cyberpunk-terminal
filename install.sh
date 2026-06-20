@@ -9,6 +9,7 @@
 #   ./install.sh                 # interactive, full install
 #   ./install.sh --yes           # no prompts, full install
 #   ./install.sh --minimal       # only what's needed to boot
+#   ./install.sh --no-extra      # skip the heavy TUI stack (btop, yazi…)
 #   ./install.sh --no-chsh       # don't change the login shell
 #   ./install.sh --no-font       # skip the Nerd Font
 #   ./install.sh --help
@@ -40,6 +41,11 @@ ASSUME_YES=0
 DO_CHSH=1
 DO_FONT=1
 MINIMAL=0
+NO_EXTRA=0
+
+USER_BIN="$HOME/.local/bin"        # where fallback binary installs land
+_ARCH="$(uname -m)"
+_OS="$(uname -s)"
 
 # ------------------------------------------------------------
 #  LOGGING
@@ -82,6 +88,7 @@ Usage: ./install.sh [options]
 
   --yes, -y      Assume "yes" to every prompt (unattended install)
   --minimal      Install only the packages needed to boot without errors
+  --no-extra     Skip the heavy TUI stack (btop, yazi, lazygit, atuin, …)
   --no-chsh      Do not change your default login shell to zsh
   --no-font      Do not install the FiraCode Nerd Font
   --help, -h     Show this help
@@ -97,6 +104,7 @@ for arg in "$@"; do
     case "$arg" in
         -y|--yes)   ASSUME_YES=1 ;;
         --minimal)  MINIMAL=1 ;;
+        --no-extra) NO_EXTRA=1 ;;
         --no-chsh)  DO_CHSH=0 ;;
         --no-font)  DO_FONT=0 ;;
         -h|--help)  usage; exit 0 ;;

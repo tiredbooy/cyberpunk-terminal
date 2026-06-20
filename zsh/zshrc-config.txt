@@ -235,11 +235,6 @@ if _cp_has fzf; then
     "
 fi
 
-    if [[ -n "$_CP_FD" ]]; then
-        export FZF_DEFAULT_COMMAND="$_CP_FD --hidden --follow --exclude .git"
-        export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-        export FZF_ALT_C_COMMAND="$_CP_FD --type d --hidden --follow --exclude .git"
-    fi
 
 # ============================================================
 # ATUIN — magical, searchable shell history
@@ -251,6 +246,17 @@ if _cp_has atuin; then
     eval "$(atuin init zsh --disable-up-arrow)"
 fi
 
+if [[ "$_cp_prompt_mode" == "starship" ]] && _cp_has starship; then
+    # ---- Optional Starship prompt (cyberpunk preset) ----
+    [[ -r "$HOME/.config/cyberpunk/starship.toml" ]] && export STARSHIP_CONFIG="$HOME/.config/cyberpunk/starship.toml"
+    eval "$(starship init zsh)"
+else
+    # ========================================================
+    #  ENHANCED CUSTOM PROMPT
+    # ========================================================
+    autoload -Uz add-zsh-hook
+    # zsh/datetime → $EPOCHREALTIME · zsh/mathfunc → int() used by the timer.
+    zmodload zsh/datetime zsh/mathfunc 2>/dev/null
 
 # ============================================================
 # PROMPT — enhanced custom (default) or optional Starship
