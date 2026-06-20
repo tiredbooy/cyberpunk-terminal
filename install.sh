@@ -179,6 +179,119 @@ install_one() {
 }
 
 # ------------------------------------------------------------
+#  TOOL INSTALLATION WITH FALLBACKS
+# ------------------------------------------------------------
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# Download a URL to a file using curl or wget.
+_dl() {
+    if   have curl; then curl -fsSL "$1" -o "$2"
+    elif have wget; then wget -qO "$2" "$1"
+    else return 1; fi
+}
+
+# Latest GitHub release tag (without a leading "v"), best-effort.
+gh_latest_tag() {
+    local repo="$1" tag=""
+    if have curl; then
+        tag=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" 2>/dev/null \
+              | grep -m1 '"tag_name"' | sed -E 's/.*"tag_name": *"v?([^"]+)".*/\1/') || true
+    fi
+    printf '%s' "$tag"
+}
+
+# --- per-tool fallbacks (used only when the package manager can't help) ---
+fallback_starship() {
+    have curl || have wget || return 1
+    mkdir -p "$USER_BIN"
+    info "installing starship via official script → $USER_BIN"
+    if have curl; then
+        curl -fsSL https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$USER_BIN" >/dev/null 2>&1
+    else
+        wget -qO- https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$USER_BIN" >/dev/null 2>&1
+    fi
+}
+
+fallback_atuin() {
+    have curl || return 1
+    info "installing atuin via official script"
+    curl --proto '=https' --tlsv1.2 -LsSf https://setup.atuin.sh | sh >/dev/null 2>&1
+}
+
+fallback_lazygit() {
+    [[ "$_OS" == "Linux" || "$_OS" == "Darwin" ]] || return 1
+    local ver arch os asset url tmp
+    ver=$(gh_latest_tag jesseduffield/lazygit); [[ -n "$ver" ]] || return 1
+    case "$_ARCH" in
+        x86_64|amd64)  arch="x86_64" ;;
+        aarch64|arm64) arch="arm64"  ;;
+        *) return 1 ;;
+    esac
+    [[ "$_OS" == "Darwin" ]] && os="Darwin" || os="Linux"
+    asset="lazygit_${ver}_${os}_${arch}.tar.gz"
+    url="https://github.com/jesseduffield/lazygit/releases/download/v${ver}/${asset}"
+    mkdir -p "$USER_BIN"; tmp="$(mktemp -d)"
+    info "downloading lazygit ${ver}"
+    _dl "$url" "$tmp/lg.tar.gz" || { rm -rf "$tmp"; return 1; }
+    tar -xzf "$tmp/lg.tar.gz" -C "$tmp" lazygit 2>/dev/null || { rm -rf "$tmp"; return 1; }
+    install -m 0755 "$tmp/lazygit" "$USER_BIN/lazygit" || { rm -rf "$tmp"; return 1; }
+    rm -rf "$tmp"
+}
+
+fallback_yazi() {
+    [[ "$_OS" == "Linux" ]] || return 1   # brew covers macOS
+    local arch asset url tmp bin ya
+    case "$_ARCH" in
+        x86_64|amd64)  arch="x86_64"  ;;
+        aarch64|arm64) arch="aarch64" ;;
+        *) return 1 ;;
+    esac
+    asset="yazi-${arch}-unknown-linux-gnu.zip"
+    url="https://github.com/sxyazi/yazi/releases/latest/download/${asset}"
+    have unzip || install_one unzip >/dev/null 2>&1 || return 1
+    mkdir -p "$USER_BIN"; tmp="$(mktemp -d)"
+    info "downloading yazi (latest)"
+    _dl "$url" "$tmp/yazi.zip" || { rm -rf "$tmp"; return 1; }
+    unzip -oq "$tmp/yazi.zip" -d "$tmp" >/dev/null 2>&1 || { rm -rf "$tmp"; return 1; }
+    bin=$(find "$tmp" -maxdepth 2 -name yazi -type f 2>/dev/null | head -n1)
+    [[ -n "$bin" ]] || { rm -rf "$tmp"; return 1; }
+    install -m 0755 "$bin" "$USER_BIN/yazi" || { rm -rf "$tmp"; return 1; }
+    ya=$(find "$tmp" -maxdepth 2 -name ya -type f 2>/dev/null | head -n1)
+    [[ -n "$ya" ]] && install -m 0755 "$ya" "$USER_BIN/ya" 2>/dev/null
+    rm -rf "$tmp"
+}
+
+# ensure_tool <command> [pkg] [fallback-fn] — try PM, then fallback, else warn.
+# Always returns 0: a missing tool only disables its (graceful) feature.
+ensure_tool() {
+    local cmd="$1" pkg="${2:-$1}" fb="${3:-}"
+    if have "$cmd"; then ok "${cmd} already present"; return 0; fi
+    if [[ -n "$PM" ]] && install_one "$pkg" && have "$cmd"; then
+        ok "${cmd} installed"; return 0
+    fi
+    if [[ -n "$fb" ]] && "$fb" && have "$cmd"; then
+        ok "${cmd} installed (fallback)"; return 0
+    fi
+    warn "could not install ${cmd} — its feature degrades gracefully"
+    return 0
+}
+
+# fzf-tab is a zsh plugin, not a package — clone it where .zshrc looks.
+install_fzf_tab() {
+    local dst="$HOME/.zsh/fzf-tab"
+    have git || { warn "git missing; skipping fzf-tab"; return 0; }
+    if [[ -d "$dst/.git" ]]; then
+        info "updating fzf-tab"
+        git -C "$dst" pull --ff-only >/dev/null 2>&1 || true
+    else
+        info "cloning fzf-tab → $dst"
+        git clone --depth 1 https://github.com/Aloxaf/fzf-tab "$dst" >/dev/null 2>&1 \
+            || warn "could not clone fzf-tab (fuzzy completion will be unavailable)"
+    fi
+    return 0
+}
+
+# ------------------------------------------------------------
 #  NERD FONT
 # ------------------------------------------------------------
 font_present() {
@@ -256,6 +369,25 @@ deploy_configs() {
     install -m 0755 "$SCRIPT_DIR/kitty/startup-welcome.sh" "$KITTY_DST/startup-welcome.sh"
     ok "wrote ~/.config/kitty/startup-welcome.sh"
 
+    # Kitty extras: custom tab bar + example sessions
+    backup "$KITTY_DST/tab_bar.py"
+    install -m 0644 "$SCRIPT_DIR/kitty/tab_bar.py" "$KITTY_DST/tab_bar.py"
+    mkdir -p "$KITTY_DST/sessions"
+    backup "$KITTY_DST/sessions/dev.session"
+    install -m 0644 "$SCRIPT_DIR/kitty/sessions/dev.session" "$KITTY_DST/sessions/dev.session"
+    ok "wrote ~/.config/kitty/{tab_bar.py,sessions/dev.session}"
+
+    # Shared files → ~/.config/cyberpunk/
+    local CYB_DST="$HOME/.config/cyberpunk"
+    mkdir -p "$CYB_DST"
+    backup "$CYB_DST/palette.sh"
+    install -m 0644 "$SCRIPT_DIR/theme/palette.sh"        "$CYB_DST/palette.sh"
+    backup "$CYB_DST/functions.zsh"
+    install -m 0644 "$SCRIPT_DIR/zsh/functions.zsh"       "$CYB_DST/functions.zsh"
+    backup "$CYB_DST/starship.toml"
+    install -m 0644 "$SCRIPT_DIR/starship/starship.toml"  "$CYB_DST/starship.toml"
+    ok "wrote ~/.config/cyberpunk/{palette.sh,functions.zsh,starship.toml}"
+
     printf '%s' "$BACKUP_DIR" > "$KITTY_DST/.cyberpunk-last-backup" 2>/dev/null || true
 }
 
@@ -269,7 +401,7 @@ set_default_shell() {
     fi
     step "Default shell"
     if ask "Make zsh your default login shell?" y; then
-        grep -qx "$zsh_path" /etc/shells 2>/dev/null || { need_sudo; echo "$zsh_path" | $SUDO tee -a /etc/shells >/dev/null; }
+        grep -qx "$zsh_path" /etc/shells 2>/dev/null || { need_sudo; echo "$zsh_path" | $SUDO tee -a /etc/shells >/dev/null || warn "could not register $zsh_path in /etc/shells"; }
         if chsh -s "$zsh_path" 2>/dev/null; then
             ok "default shell set to zsh (takes effect on next login)"
         else
@@ -330,6 +462,29 @@ main() {
         fi
     fi
 
+    # Extra modern TUI stack — each tool is optional and degrades gracefully.
+    if [[ "$MINIMAL" == 0 && "$NO_EXTRA" == 0 ]]; then
+        step "Modern TUI stack"
+        info "btop · fastfetch · glow · lazygit · yazi · atuin · starship"
+        if ask "Install the modern TUI stack now?" y; then
+            ensure_tool btop
+            ensure_tool fastfetch
+            ensure_tool glow
+            ensure_tool lazygit  lazygit  fallback_lazygit
+            ensure_tool yazi     yazi     fallback_yazi
+            ensure_tool atuin    atuin    fallback_atuin
+            ensure_tool starship starship fallback_starship
+        else
+            warn "skipped the extra TUI stack"
+        fi
+    fi
+
+    # fzf-tab plugin (fuzzy, previewable completion) — needs only git.
+    if [[ "$MINIMAL" == 0 ]]; then
+        step "fzf-tab plugin"
+        install_fzf_tab
+    fi
+
     [[ "$DO_FONT" == 1 && "$MINIMAL" == 0 ]] && install_font
 
     deploy_configs
@@ -343,6 +498,14 @@ main() {
     printf '   %s1.%s Open (or restart) %sKitty%s\n' "$C_CYAN" "$C_RST" "$C_BOLD" "$C_RST"
     printf '   %s2.%s If zsh is not yet active:  %sexec zsh%s\n' "$C_CYAN" "$C_RST" "$C_BOLD" "$C_RST"
     printf '   %s3.%s Set Kitty as your default terminal in your DE settings\n' "$C_CYAN" "$C_RST"
+    printf '   %s4.%s Type %scyber help%s for the cheatsheet · %sCtrl+Shift+G/N/Y%s for lazygit/btop/yazi\n' \
+        "$C_CYAN" "$C_RST" "$C_BOLD" "$C_RST" "$C_BOLD" "$C_RST"
+    printf '   %s5.%s Try the optional Starship prompt:  %scyber prompt starship%s\n' \
+        "$C_CYAN" "$C_RST" "$C_BOLD" "$C_RST"
+    if [[ ":$PATH:" != *":$USER_BIN:"* && -d "$USER_BIN" ]]; then
+        printf '\n%s   note:%s some tools installed to %s%s%s — your shell adds it to PATH automatically.\n' \
+            "$C_YELLOW" "$C_RST" "$C_BOLD" "$USER_BIN" "$C_RST"
+    fi
     printf '\n%s   To undo everything: %s./uninstall.sh%s\n\n' "$C_GRAY" "$C_BOLD" "$C_RST"
 }
 

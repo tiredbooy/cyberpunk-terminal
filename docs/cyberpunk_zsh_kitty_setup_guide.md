@@ -9,18 +9,20 @@ It is designed to be saved and reused later.
 ## 1. Overview
 
 This setup provides:
-- A highly customized **ZSH shell** with autosuggestions, syntax highlighting, fuzzy search, and Git integration
-- A **Cyberpunk-style prompt** with timers and visual feedback
-- **Kitty terminal** with glassmorphism, neon colors, and Nerd Font support
-- Modern CLI tools (`eza`, `bat`, `fd`, `fzf`, `zoxide`)
+- A highly customized **ZSH shell** with autosuggestions, syntax highlighting, fuzzy completion (`fzf-tab`), magical history (`atuin`), and Git integration
+- A **Cyberpunk-style prompt** (custom, with an optional **Starship** preset), timers, runtime versions, and a transient prompt
+- **Kitty terminal** with glassmorphism, neon colors, a cursor trail, a custom tab bar, overlay tool launchers, and Nerd Font support
+- An **animated welcome dashboard** with live system/git/network panels
+- Modern CLI tools (`eza`, `bat`, `fd`, `fzf`, `zoxide`) plus a TUI stack (`btop`, `yazi`, `lazygit`, `fastfetch`, `glow`)
 
 ---
 
 ## 2. Supported Package Managers
 
-Commands are provided for:
+The examples below use **APT** and **Pacman**, but `./install.sh` also supports:
 - **APT** (Debian / Ubuntu / Linux Mint / Pop!_OS)
 - **Pacman** (Arch Linux / EndeavourOS / Manjaro)
+- **DNF** (Fedora / RHEL), **Zypper** (openSUSE), and **Homebrew** (macOS)
 
 ---
 
@@ -300,16 +302,44 @@ FiraCode Nerd Font
 
 ---
 
-## 11. Notes & Warnings
+## 11. Modern TUI Stack (Optional, Recommended)
+
+These power the overlay launchers, the welcome dashboard's monitor, the optional
+Starship prompt, and the fuzzy completion. `./install.sh` installs them all and,
+for tools missing from your distro's repos, falls back to the official
+installer / prebuilt binary (into `~/.local/bin`). Manual install:
+
+| Tool        | Pacman      | APT (may need a newer release) | DNF        | Fallback (any OS)                          |
+| ----------- | ----------- | ------------------------------ | ---------- | ------------------------------------------ |
+| `btop`      | `btop`      | `btop`                         | `btop`     | GitHub releases                            |
+| `fastfetch` | `fastfetch` | `fastfetch`                    | `fastfetch`| GitHub releases                            |
+| `glow`      | `glow`      | Charm apt repo                 | `glow`     | GitHub releases                            |
+| `lazygit`   | `lazygit`   | *(often absent)*               | `lazygit`  | GitHub release binary → `~/.local/bin`     |
+| `yazi`      | `yazi`      | *(often absent)*               | *(absent)* | GitHub release binary → `~/.local/bin`     |
+| `atuin`     | `atuin`     | *(often absent)*               | *(absent)* | `curl https://setup.atuin.sh \| sh`        |
+| `starship`  | `starship`  | *(often absent)*               | *(absent)* | `curl https://starship.rs/install.sh \| sh`|
+| `fzf-tab`   | AUR         | git clone                      | git clone  | `git clone Aloxaf/fzf-tab ~/.zsh/fzf-tab`  |
+
+> On macOS, `brew install btop fastfetch glow lazygit yazi atuin starship`
+> covers everything.
+
+The setup is fully runtime-detected: any tool you skip simply disables its one
+feature (e.g. the `btop` overlay falls back to `top`).
+
+---
+
+## 12. Notes & Warnings
 
 - `compinit -u` is faster but insecure on shared systems
 - Your ZSH config overrides `cd` with `z`
 - Kitty blur and opacity require a compositor (Wayland or Picom on X11)
+- The neon **cursor trail** needs **kitty ≥ 0.36** (older kitty ignores it)
+- The **custom tab bar** needs `~/.config/kitty/tab_bar.py`; revert with `tab_bar_style powerline`
 - Nerd Fonts are mandatory for icons and glyphs
 
 ---
 
-## 12. Final Result
+## 13. Final Result
 
 After completing this setup, you get:
 - Neon cyberpunk terminal

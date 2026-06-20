@@ -29,6 +29,7 @@ PURGE=0
 
 BACKUP_ROOT="$HOME/.cyberpunk-terminal-backup"
 KITTY_DST="$HOME/.config/kitty"
+CYB_DST="$HOME/.config/cyberpunk"
 
 printf '%s%s⚡ Cyberpunk Terminal — uninstall%s\n\n' "$C_CYAN" "$C_BOLD" "$C_RST"
 
@@ -42,8 +43,12 @@ fi
 restore_one() {  # restore_one <backup-name> <dest-path>
     local name="$1" dst="$2"
     if [[ -n "$LATEST" && -e "$LATEST/$name" ]]; then
-        cp -RL "$LATEST/$name" "$dst"
-        ok "restored $dst"
+        mkdir -p "$(dirname "$dst")"          # nested targets (sessions/, cyberpunk/)
+        if cp -RL "$LATEST/$name" "$dst"; then # guarded so one failure can't abort set -e
+            ok "restored $dst"
+        else
+            warn "failed to restore $dst"
+        fi
     elif [[ "$PURGE" == 1 ]]; then
         rm -f "$dst" && info "removed $dst (no backup to restore)"
     else
@@ -61,8 +66,19 @@ fi
 restore_one ".zshrc"              "$HOME/.zshrc"
 restore_one "kitty.conf"          "$KITTY_DST/kitty.conf"
 restore_one "startup-welcome.sh"  "$KITTY_DST/startup-welcome.sh"
+restore_one "tab_bar.py"          "$KITTY_DST/tab_bar.py"
+restore_one "dev.session"         "$KITTY_DST/sessions/dev.session"
+restore_one "palette.sh"          "$CYB_DST/palette.sh"
+restore_one "functions.zsh"       "$CYB_DST/functions.zsh"
+restore_one "starship.toml"       "$CYB_DST/starship.toml"
 
 rm -f "$KITTY_DST/.cyberpunk-last-backup" 2>/dev/null || true
+
+# On --purge, also drop the prompt-state file and any now-empty dirs.
+if [[ "$PURGE" == 1 ]]; then
+    rm -f "$CYB_DST/prompt" 2>/dev/null || true
+    rmdir "$KITTY_DST/sessions" "$CYB_DST" 2>/dev/null || true
+fi
 
 printf '\n'
 ok "Done. Restart your terminal for changes to take effect."
