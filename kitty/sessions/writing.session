@@ -1,0 +1,22 @@
+# ============================================================
+#   Cyberpunk writing session — a distraction-light desk
+# ------------------------------------------------------------
+#   Load it with:
+#     kitty --session ~/.config/kitty/sessions/writing.session
+#   …or from a notes directory:
+#     kitty --session ~/.config/kitty/sessions/writing.session --directory ~/notes
+#
+#   One focused tab: a wide editor on top for prose/markdown,
+#   with a small shell underneath for previewing (glow) and
+#   running file commands.
+# ============================================================
+
+new_tab write
+layout horizontal
+
+# Main editor pane. Swap nvim for whatever you use.
+launch --title editor --cwd=current nvim
+focus
+
+# A small shell for previewing markdown (glow) and file commands.
+launch --title shell --cwd=current

@@ -5,12 +5,18 @@
 #       cyber prompt starship     (then: cyber reload)
 #   or set CYBERPUNK_PROMPT=starship in your environment.
 #   Mirrors the custom prompt's two-line neon look.
+#
+#   THEMES: the active palette below is switched live by
+#       cyber theme <name>
+#   which sed-rewrites the top-level  palette = "<name>"  line.
+#   Keep the four [palettes.*] hexes in sync with the matching
+#   theme/themes/<name>.sh presets (CYB_* values).
 # ============================================================
 
 "$schema" = 'https://starship.rs/config-schema.json'
 
 add_newline = true
-palette = "cyberpunk"
+palette = "neon"
 
 format = """
 [╭─](bold purple)[▓▒░](purple) $username$hostname[in ](dimmed gray)$directory$git_branch$git_status$git_metrics$nodejs$python$rust$golang$cmd_duration
@@ -18,7 +24,14 @@ format = """
 
 right_format = "$time"
 
-[palettes.cyberpunk]
+# ------------------------------------------------------------
+#   Palettes — one per shipped theme. Switch with: cyber theme
+#   Color NAMES are stable; only the hex values differ so the
+#   module styles below recolor automatically on theme change.
+# ------------------------------------------------------------
+
+# neon — the CURRENT locked palette (default)
+[palettes.neon]
 cyan        = "#00d4ff"
 bright_cyan = "#00ffff"
 purple      = "#bd00ff"
@@ -27,9 +40,51 @@ pink        = "#ff006e"
 magenta     = "#ff00ff"
 green       = "#00ff9f"
 yellow      = "#ffff00"
-red         = "#ff3b3b"
+red         = "#ff3355"
 gray        = "#4a5f7f"
 fg          = "#e0f0ff"
+
+# synthwave — sunset magenta / cyan retrowave
+[palettes.synthwave]
+cyan        = "#03edf9"
+bright_cyan = "#72f1ff"
+purple      = "#b893ff"
+soft_purple = "#c792ea"
+pink        = "#ff7edb"
+magenta     = "#ff8cff"
+green       = "#72f1b8"
+yellow      = "#fede5d"
+red         = "#fe4450"
+gray        = "#6d6a8a"
+fg          = "#f0eff1"
+
+# matrix — phosphor green on black
+[palettes.matrix]
+cyan        = "#00ffaa"
+bright_cyan = "#5fffd7"
+purple      = "#00cc66"
+soft_purple = "#33dd88"
+pink        = "#00ff41"
+magenta     = "#39ff14"
+green       = "#00ff41"
+yellow      = "#aaff00"
+red         = "#ff5f5f"
+gray        = "#2f5f3f"
+fg          = "#c8ffd0"
+
+# tokyo-neon — Tokyo Night flavored neon
+[palettes.tokyo-neon]
+cyan        = "#7dcfff"
+bright_cyan = "#2ac3de"
+purple      = "#bb9af7"
+soft_purple = "#9d7cd8"
+pink        = "#f7768e"
+magenta     = "#c0caf5"
+green       = "#9ece6a"
+yellow      = "#e0af68"
+red         = "#f7768e"
+gray        = "#565f89"
+fg          = "#c0caf5"
 
 [username]
 show_always = true

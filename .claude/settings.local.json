@@ -20,7 +20,8 @@
       "Bash(curl -fsSL \"https://api.github.com/repos/sxyazi/yazi/releases/latest\")",
       "Bash(kitty --version)",
       "Bash(python3 -c \"import kitty; print\\(kitty.__file__\\)\")",
-      "Bash(find / -name \"tab_bar.py\" -path \"*kitty*\")"
+      "Bash(find / -name \"tab_bar.py\" -path \"*kitty*\")",
+      "Bash(shellcheck -s bash install.sh uninstall.sh kitty/startup-welcome.sh)"
     ]
   }
 }

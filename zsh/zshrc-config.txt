@@ -12,6 +12,17 @@
 # CORE ZSH OPTIONS
 # ------------------------------------------------------------
 
+# Homebrew (macOS / Apple-Silicon): wire up brew's env before the
+# user-local bin dirs so brew-installed tools win. No-op on Linux,
+# where neither brew path exists.
+for _cp_brew in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    if [[ -x "$_cp_brew" ]]; then
+        eval "$("$_cp_brew" shellenv)"
+        break
+    fi
+done
+unset _cp_brew
+
 # Put user-local bin dirs (where fallback installs land) on PATH.
 for _cp_bindir in "$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/.atuin/bin"; do
     [[ -d "$_cp_bindir" && ":$PATH:" != *":$_cp_bindir:"* ]] && export PATH="$_cp_bindir:$PATH"
@@ -71,10 +82,10 @@ _cp_has() { command -v "$1" >/dev/null 2>&1; }
 
 autoload -Uz compinit
 # Cache compdump and only run the slow security check once a day.
-if [[ -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
-    compinit
+if [[ ! -e ${ZDOTDIR:-$HOME}/.zcompdump || -n ${ZDOTDIR:-$HOME}/.zcompdump(#qN.mh+24) ]]; then
+    compinit                           # Missing or >24h old: full init + security check
 else
-    compinit -C                        # Fast path: trust the cache
+    compinit -C                        # Fresh dump (<24h): trust the cache (fast path)
 fi
 
 zmodload zsh/complist
@@ -246,17 +257,6 @@ if _cp_has atuin; then
     eval "$(atuin init zsh --disable-up-arrow)"
 fi
 
-if [[ "$_cp_prompt_mode" == "starship" ]] && _cp_has starship; then
-    # ---- Optional Starship prompt (cyberpunk preset) ----
-    [[ -r "$HOME/.config/cyberpunk/starship.toml" ]] && export STARSHIP_CONFIG="$HOME/.config/cyberpunk/starship.toml"
-    eval "$(starship init zsh)"
-else
-    # ========================================================
-    #  ENHANCED CUSTOM PROMPT
-    # ========================================================
-    autoload -Uz add-zsh-hook
-    # zsh/datetime → $EPOCHREALTIME · zsh/mathfunc → int() used by the timer.
-    zmodload zsh/datetime zsh/mathfunc 2>/dev/null
 
 # ============================================================
 # PROMPT — enhanced custom (default) or optional Starship
@@ -296,6 +296,8 @@ else
     UNBOLD='%b'
 
     # ---- git segment: branch · ahead/behind · staged/dirty/untracked · stash ----
+    # Renders the segment fresh. The cache wrapper below (_cp_update_git)
+    # is what the prompt actually calls; this does the real work.
     git_prompt_info() {
         command -v git >/dev/null 2>&1 || return
         git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return
@@ -303,16 +305,35 @@ else
         ref=$(git symbolic-ref --short HEAD 2>/dev/null) || ref=$(git rev-parse --short HEAD 2>/dev/null)
         [[ -z "$ref" ]] && return
 
-        local porcelain staged unstaged untracked stashed counts ahead="" behind=""
+        # Single porcelain pass for staged/dirty/untracked, with the
+        # stash count folded in alongside. Lines are split on newlines
+        # with zsh's (f) flag and counted with builtins — no awk/wc/tr
+        # subshells in the hot path.
+        local porcelain counts ahead="" behind=""
+        local -i staged=0 unstaged=0 untracked=0 stashed=0
         porcelain=$(git status --porcelain 2>/dev/null)
-        # One awk pass counts the three change categories.
-        read staged unstaged untracked <<< "$(print -r -- "$porcelain" | awk '
-            /^[MADRC]/ {s++} /^.[MD]/ {u++} /^\?\?/ {t++}
-            END {print s+0, u+0, t+0}')"
-        stashed=$(git stash list 2>/dev/null | wc -l | tr -d ' ')
+        local -a _cp_glines
+        _cp_glines=("${(@f)porcelain}")
+        local _cp_gl
+        for _cp_gl in "${_cp_glines[@]}"; do
+            [[ -z "$_cp_gl" ]] && continue
+            case "$_cp_gl" in
+                '??'*)    (( untracked++ )) ;;
+                [MADRC]*) (( staged++ )) ;|
+                ?[MD]*)   (( unstaged++ )) ;;
+            esac
+        done
         if counts=$(git rev-list --left-right --count '@{u}...HEAD' 2>/dev/null); then
             behind=${counts%%[[:space:]]*}
             ahead=${counts##*[[:space:]]}
+        fi
+        # Count stash entries via zsh array length — no `wc | tr`.
+        local _cp_stash
+        _cp_stash=$(git stash list 2>/dev/null)
+        if [[ -n "$_cp_stash" ]]; then
+            local -a _cp_slines
+            _cp_slines=("${(@f)_cp_stash}")
+            stashed=${#_cp_slines}
         fi
 
         local out="${DARK_GRAY}on${RESET} "
@@ -329,6 +350,31 @@ else
         (( stashed   > 0 )) && out+=" ${NEON_CYAN}⚑${stashed}${RESET}"
         print -r -- "$out"
     }
+
+    # ---- git segment (rendered fresh each prompt) ----
+    # A stat-based cache (.git/HEAD + index mtime) was tried and removed:
+    # a plain working-tree edit of a tracked file — the normal edit-in-an-
+    # editor flow — never touches HEAD or the index, so the cache showed a
+    # STALE clean/dirty state until the next cd or git command. Correctness
+    # wins. git_prompt_info is already fork-lean (one `git status
+    # --porcelain` + one rev-list + one stash list, counted with zsh
+    # builtins instead of wc/tr), so rendering it every precmd is cheap on
+    # normal repos. Very large/NFS repos can opt into a future background
+    # refresh via CYBERPUNK_GIT_ASYNC (documented; not enabled by default).
+    typeset -g _cp_git_seg=""
+    _cp_update_git() { _cp_git_seg="$(git_prompt_info)"; }
+    add-zsh-hook precmd _cp_update_git
+    _cp_update_git
+
+    # ---- optional SSH badge ----
+    # Over an SSH connection, show a small  ssh <host>  segment so you
+    # always know you're remote. Default on when $SSH_CONNECTION is set;
+    # opt out with CYBERPUNK_SSH_BADGE=0. Computed once (host is stable
+    # for the session) so it costs nothing per prompt.
+    typeset -g _cp_ssh_seg=""
+    if [[ -n "${SSH_CONNECTION:-}" && "${CYBERPUNK_SSH_BADGE:-1}" == 1 ]]; then
+        _cp_ssh_seg=" ${NEON_PINK}ssh ${NEON_CYAN}%m${RESET}"
+    fi
 
     # ---- runtime/version segment (node/python/rust/go), cached per dir ----
     runtime_prompt_info() {
@@ -377,7 +423,7 @@ else
 
     # ---- the prompt ----
     FULL_PROMPT='
-${DEEP_PURPLE}╭─${RESET}${NEON_PURPLE}▓▒░${RESET} ${BOLD}${NEON_CYAN}%n${RESET}${DARK_GRAY}@${RESET}${DEEP_PURPLE}%m${RESET} ${DARK_GRAY}in${RESET} ${NEON_YELLOW}%~${RESET} $(git_prompt_info)${_cp_runtime_seg}
+${DEEP_PURPLE}╭─${RESET}${NEON_PURPLE}▓▒░${RESET} ${BOLD}${NEON_CYAN}%n${RESET}${DARK_GRAY}@${RESET}${DEEP_PURPLE}%m${RESET} ${DARK_GRAY}in${RESET} ${NEON_YELLOW}%~${RESET} ${_cp_git_seg}${_cp_runtime_seg}${_cp_ssh_seg}
 ${DEEP_PURPLE}╰─${RESET}${NEON_PINK}❯${NEON_PURPLE}❯${NEON_CYAN}❯${RESET} '
     # Right prompt: runtime + exit status (✓ / ✗ code) + clock.
     FULL_RPROMPT='${_cp_runtime} %(?.${NEON_GREEN}✓${RESET}.${CYBER_RED}✗ %?${RESET}) ${DARK_GRAY}%D{%H:%M}${RESET}'
@@ -457,6 +503,15 @@ if _cp_has zoxide; then
     eval "$(zoxide init zsh)"
     alias cd="z"                      # Replace cd with smart jumping
 fi
+
+
+# ------------------------------------------------------------
+# LOCAL OVERRIDES (USER DATA — NEVER CLOBBERED BY THE INSTALLER)
+# ------------------------------------------------------------
+# Sourced near the very end so anything here wins over the defaults
+# above: extra aliases, exports, prompt tweaks, machine-specific
+# secrets, etc. The file is optional — absence is a silent no-op.
+_cp_source_first "$HOME/.config/cyberpunk/local.zsh"
 
 
 # ------------------------------------------------------------
