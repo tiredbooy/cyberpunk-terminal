@@ -1,0 +1,61 @@
+# EditorConfig — https://editorconfig.org
+# Matches the conventions already used across this repo:
+#   shell + python -> 4-space indent, no tabs
+#   toml/conf      -> flat, no indentation
+#   markdown       -> 2-space (preserve trailing whitespace for hard breaks)
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Shell scripts (install.sh, uninstall.sh, bootstrap.sh, *.sh, *.zsh)
+[*.{sh,zsh,bash}]
+indent_style = space
+indent_size = 4
+
+[zshrc-config.txt]
+indent_style = space
+indent_size = 4
+
+# Python (kitty tab bar)
+[*.py]
+indent_style = space
+indent_size = 4
+
+# Kitty config + theme conf + tmux conf are flat directive files
+[*.conf]
+indent_style = space
+indent_size = 4
+
+# TOML (starship) — flat tables in this repo
+[*.toml]
+indent_style = space
+indent_size = 2
+
+# YAML (GitHub Actions) requires spaces
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.json]
+indent_style = space
+indent_size = 2
+
+# Markdown — keep trailing whitespace (line breaks) and a soft 2-space indent
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
+
+# Kitty session files are directive files
+[*.session]
+indent_style = space
+indent_size = 4
+
+[Makefile]
+indent_style = tab

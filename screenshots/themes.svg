@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760">
+<defs>
+  <radialGradient id="bg" cx="50%" cy="38%" r="85%">
+    <stop offset="0%" stop-color="#0c1220"/><stop offset="55%" stop-color="#07090f"/>
+    <stop offset="100%" stop-color="#040507"/>
+  </radialGradient>
+  <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="9" result="b"/><feMerge>
+    <feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+    <feGaussianBlur stdDeviation="3"/>
+  </filter>
+  
+</defs>
+<rect width="1280" height="760" fill="url(#bg)"/>
+<text x="490.0" y="56" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="26" font-weight="bold" xml:space="preserve" letter-spacing="1"><tspan fill="#00ffff">CYBERPUNK</tspan><tspan fill="#6b7a93">  ·  </tspan><tspan fill="#ff00ff">4 LIVE THEMES</tspan></text>
+<text x="390.0" y="86" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="16" font-weight="normal" xml:space="preserve"><tspan fill="#6b7a93">cyber theme  &lt;neon | synthwave | matrix | tokyo-neon&gt;   — applied live, no restart</tspan></text>
+<rect x="60.0" y="120" width="560" height="270" rx="16" fill="none" stroke="#00d4ff" stroke-width="2" opacity="0.55" filter="url(#soft)"/>
+<rect x="60.0" y="120" width="560" height="270" rx="16" fill="#0a0e14" stroke="#00d4ff" stroke-width="1.3" opacity="0.98"/>
+<rect x="60.0" y="120" width="560" height="40" rx="16" fill="#ffffff" opacity="0.03"/>
+<circle cx="86.0" cy="141" r="6.5" fill="#ff006e"/>
+<circle cx="110.0" cy="141" r="6.5" fill="#ffff00"/>
+<circle cx="134.0" cy="141" r="6.5" fill="#00ff9f"/>
+<text x="314.8" y="146" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve"><tspan fill="#7d8aa5">  neon</tspan></text>
+<text x="88.0" y="204" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="22" font-weight="bold" xml:space="preserve"><tspan fill="#00ffff">Neon Grid</tspan></text>
+<rect x="88.0" y="230" width="46" height="22" rx="5" fill="#00d4ff"/>
+<rect x="142.0" y="230" width="46" height="22" rx="5" fill="#bd00ff"/>
+<rect x="196.0" y="230" width="46" height="22" rx="5" fill="#a277ff"/>
+<rect x="250.0" y="230" width="46" height="22" rx="5" fill="#ff006e"/>
+<rect x="304.0" y="230" width="46" height="22" rx="5" fill="#00ff9f"/>
+<rect x="358.0" y="230" width="46" height="22" rx="5" fill="#ffff00"/>
+<rect x="412.0" y="230" width="46" height="22" rx="5" fill="#ff3355"/>
+<text x="88.0" y="290" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="17" font-weight="bold" xml:space="preserve"><tspan fill="#a277ff">╭─</tspan><tspan fill="#bd00ff">▓▒░ </tspan><tspan fill="#00ffff">tiredboy</tspan><tspan fill="#7587a0"> in </tspan><tspan fill="#ffff00">~/dev</tspan><tspan fill="#7587a0">  </tspan><tspan fill="#ffff00"> main</tspan><tspan fill="#00ff9f"> ✚1</tspan></text>
+<text x="88.0" y="320" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="17" font-weight="bold" xml:space="preserve"><tspan fill="#a277ff">╰─</tspan><tspan fill="#ff006e">❯❯❯ </tspan><tspan fill="#00ff9f"> v22</tspan><tspan fill="#7587a0">  </tspan><tspan fill="#7587a0"> 21:34</tspan></text>
+<rect x="660.0" y="120" width="560" height="270" rx="16" fill="none" stroke="#36f9f6" stroke-width="2" opacity="0.55" filter="url(#soft)"/>
+<rect x="660.0" y="120" width="560" height="270" rx="16" fill="#1a0b2e" stroke="#36f9f6" stroke-width="1.3" opacity="0.98"/>
+<rect x="660.0" y="120" width="560" height="40" rx="16" fill="#ffffff" opacity="0.03"/>
+<circle cx="686.0" cy="141" r="6.5" fill="#ff2e97"/>
+<circle cx="710.0" cy="141" r="6.5" fill="#fede5d"/>
+<circle cx="734.0" cy="141" r="6.5" fill="#72f1b8"/>
+<text x="893.8" y="146" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve"><tspan fill="#7d8aa5">  synthwave</tspan></text>
+<text x="688.0" y="204" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="22" font-weight="bold" xml:space="preserve"><tspan fill="#72f1ff">Synthwave Outrun</tspan></text>
+<rect x="688.0" y="230" width="46" height="22" rx="5" fill="#36f9f6"/>
+<rect x="742.0" y="230" width="46" height="22" rx="5" fill="#b967ff"/>
+<rect x="796.0" y="230" width="46" height="22" rx="5" fill="#d4a6ff"/>
+<rect x="850.0" y="230" width="46" height="22" rx="5" fill="#ff2e97"/>
+<rect x="904.0" y="230" width="46" height="22" rx="5" fill="#72f1b8"/>
+<rect x="958.0" y="230" width="46" height="22" rx="5" fill="#fede5d"/>
+<rect x="1012.0" y="230" width="46" height="22" rx="5" fill="#fe4450"/>
+<text x="688.0" y="290" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="17" font-weight="bold" xml:space="preserve"><tspan fill="#d4a6ff">╭─</tspan><tspan fill="#b967ff">▓▒░ </tspan><tspan fill="#72f1ff">tiredboy</tspan><tspan fill="#7587a0"> in </tspan><tspan fill="#fede5d">~/dev</tspan><tspan fill="#7587a0">  </tspan><tspan fill="#fede5d"> main</tspan><tspan fill="#72f1b8"> ✚1</tspan></text>
+<text x="688.0" y="320" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="17" font-weight="bold" xml:space="preserve"><tspan fill="#d4a6ff">╰─</tspan><tspan fill="#ff2e97">❯❯❯ </tspan><tspan fill="#72f1b8"> v22</tspan><tspan fill="#7587a0">  </tspan><tspan fill="#7587a0"> 21:34</tspan></text>
+<rect x="60.0" y="430" width="560" height="270" rx="16" fill="none" stroke="#39ff14" stroke-width="2" opacity="0.55" filter="url(#soft)"/>
+<rect x="60.0" y="430" width="560" height="270" rx="16" fill="#020a02" stroke="#39ff14" stroke-width="1.3" opacity="0.98"/>
+<rect x="60.0" y="430" width="560" height="40" rx="16" fill="#ffffff" opacity="0.03"/>
+<circle cx="86.0" cy="451" r="6.5" fill="#00ff66"/>
+<circle cx="110.0" cy="451" r="6.5" fill="#b6ff00"/>
+<circle cx="134.0" cy="451" r="6.5" fill="#00ff41"/>
+<text x="306.4" y="456" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve"><tspan fill="#7d8aa5">  matrix</tspan></text>
+<text x="88.0" y="514" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="22" font-weight="bold" xml:space="preserve"><tspan fill="#7dff6b">Matrix Rain</tspan></text>
+<rect x="88.0" y="540" width="46" height="22" rx="5" fill="#39ff14"/>
+<rect x="142.0" y="540" width="46" height="22" rx="5" fill="#00b347"/>
+<rect x="196.0" y="540" width="46" height="22" rx="5" fill="#00e676"/>
+<rect x="250.0" y="540" width="46" height="22" rx="5" fill="#00ff66"/>
+<rect x="304.0" y="540" width="46" height="22" rx="5" fill="#00ff41"/>
+<rect x="358.0" y="540" width="46" height="22" rx="5" fill="#b6ff00"/>
+<rect x="412.0" y="540" width="46" height="22" rx="5" fill="#ff5f56"/>
+<text x="88.0" y="600" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="17" font-weight="bold" xml:space="preserve"><tspan fill="#00e676">╭─</tspan><tspan fill="#00b347">▓▒░ </tspan><tspan fill="#7dff6b">tiredboy</tspan><tspan fill="#7587a0"> in </tspan><tspan fill="#b6ff00">~/dev</tspan><tspan fill="#7587a0">  </tspan><tspan fill="#b6ff00"> main</tspan><tspan fill="#00ff41"> ✚1</tspan></text>
+<text x="88.0" y="630" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="17" font-weight="bold" xml:space="preserve"><tspan fill="#00e676">╰─</tspan><tspan fill="#00ff66">❯❯❯ </tspan><tspan fill="#00ff41"> v22</tspan><tspan fill="#7587a0">  </tspan><tspan fill="#7587a0"> 21:34</tspan></text>
+<rect x="660.0" y="430" width="560" height="270" rx="16" fill="none" stroke="#7dcfff" stroke-width="2" opacity="0.55" filter="url(#soft)"/>
+<rect x="660.0" y="430" width="560" height="270" rx="16" fill="#1a1b26" stroke="#7dcfff" stroke-width="1.3" opacity="0.98"/>
+<rect x="660.0" y="430" width="560" height="40" rx="16" fill="#ffffff" opacity="0.03"/>
+<circle cx="686.0" cy="451" r="6.5" fill="#f7768e"/>
+<circle cx="710.0" cy="451" r="6.5" fill="#e0af68"/>
+<circle cx="734.0" cy="451" r="6.5" fill="#9ece6a"/>
+<text x="889.6" y="456" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve"><tspan fill="#7d8aa5">  tokyo-neon</tspan></text>
+<text x="688.0" y="514" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="22" font-weight="bold" xml:space="preserve"><tspan fill="#2ac3de">Tokyo Neon</tspan></text>
+<rect x="688.0" y="540" width="46" height="22" rx="5" fill="#7dcfff"/>
+<rect x="742.0" y="540" width="46" height="22" rx="5" fill="#bb9af7"/>
+<rect x="796.0" y="540" width="46" height="22" rx="5" fill="#c0a0ff"/>
+<rect x="850.0" y="540" width="46" height="22" rx="5" fill="#f7768e"/>
+<rect x="904.0" y="540" width="46" height="22" rx="5" fill="#9ece6a"/>
+<rect x="958.0" y="540" width="46" height="22" rx="5" fill="#e0af68"/>
+<rect x="1012.0" y="540" width="46" height="22" rx="5" fill="#f7768e"/>
+<text x="688.0" y="600" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="17" font-weight="bold" xml:space="preserve"><tspan fill="#c0a0ff">╭─</tspan><tspan fill="#bb9af7">▓▒░ </tspan><tspan fill="#2ac3de">tiredboy</tspan><tspan fill="#7587a0"> in </tspan><tspan fill="#e0af68">~/dev</tspan><tspan fill="#7587a0">  </tspan><tspan fill="#e0af68"> main</tspan><tspan fill="#9ece6a"> ✚1</tspan></text>
+<text x="688.0" y="630" font-family="FiraCode Nerd Font Mono, JetBrainsMono Nerd Font Mono, monospace" font-size="17" font-weight="bold" xml:space="preserve"><tspan fill="#c0a0ff">╰─</tspan><tspan fill="#f7768e">❯❯❯ </tspan><tspan fill="#9ece6a"> v22</tspan><tspan fill="#7587a0">  </tspan><tspan fill="#7587a0"> 21:34</tspan></text>
+</svg>

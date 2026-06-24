@@ -1,0 +1,32 @@
+# ============================================================
+#   Cyberpunk ops session — a sysadmin / SRE cockpit
+# ------------------------------------------------------------
+#   Load it with:
+#     kitty --session ~/.config/kitty/sessions/ops.session
+#   …or from a working directory:
+#     kitty --session ~/.config/kitty/sessions/ops.session --directory ~/infra
+#
+#   Two tabs: a "monitor" tab with a system monitor beside a
+#   live log shell, and a "ops" tab with a couple of shells for
+#   running commands and poking at containers.
+# ============================================================
+
+new_tab monitor
+layout tall
+
+# Live system monitor (falls back to top if btop isn't installed).
+launch --title monitor --cwd=current sh -c 'command -v btop >/dev/null 2>&1 && exec btop || exec top'
+focus
+
+# A shell for tailing logs / journalctl.
+launch --title logs --cwd=current
+
+new_tab ops
+layout fat
+
+# Primary ops shell.
+launch --title ops --cwd=current
+focus
+
+# Container / cluster watch (falls back to a plain shell).
+launch --title containers --cwd=current sh -c 'command -v lazydocker >/dev/null 2>&1 && exec lazydocker || exec ${SHELL:-sh}'

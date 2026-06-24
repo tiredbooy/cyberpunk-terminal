@@ -1,0 +1,15 @@
+{
+  "base": "#0a0e14",
+  "fg": "#e0f0ff",
+  "cyan": "#00d4ff",
+  "cyan_bright": "#00ffff",
+  "purple": "#bd00ff",
+  "purple_bright": "#a277ff",
+  "pink": "#ff006e",
+  "pink_bright": "#ff00ff",
+  "green": "#00ff9f",
+  "yellow": "#ffff00",
+  "red": "#ff3355",
+  "theme_name": "neon",
+  "theme_label": "Neon Grid"
+}

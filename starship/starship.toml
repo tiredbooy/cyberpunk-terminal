@@ -1,0 +1,167 @@
+# ============================================================
+#   Cyberpunk Starship preset  —  optional prompt
+# ------------------------------------------------------------
+#   Deployed to ~/.config/cyberpunk/starship.toml. Enable with:
+#       cyber prompt starship     (then: cyber reload)
+#   or set CYBERPUNK_PROMPT=starship in your environment.
+#   Mirrors the custom prompt's two-line neon look.
+#
+#   THEMES: the active palette below is switched live by
+#       cyber theme <name>
+#   which sed-rewrites the top-level  palette = "<name>"  line.
+#   Keep the four [palettes.*] hexes in sync with the matching
+#   theme/themes/<name>.sh presets (CYB_* values).
+# ============================================================
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = true
+palette = "neon"
+
+format = """
+[╭─](bold purple)[▓▒░](purple) $username$hostname[in ](dimmed gray)$directory$git_branch$git_status$git_metrics$nodejs$python$rust$golang$cmd_duration
+[╰─](bold purple)$character"""
+
+right_format = "$time"
+
+# ------------------------------------------------------------
+#   Palettes — one per shipped theme. Switch with: cyber theme
+#   Color NAMES are stable; only the hex values differ so the
+#   module styles below recolor automatically on theme change.
+# ------------------------------------------------------------
+
+# neon — the CURRENT locked palette (default)
+[palettes.neon]
+cyan        = "#00d4ff"
+bright_cyan = "#00ffff"
+purple      = "#bd00ff"
+soft_purple = "#a277ff"
+pink        = "#ff006e"
+magenta     = "#ff00ff"
+green       = "#00ff9f"
+yellow      = "#ffff00"
+red         = "#ff3355"
+gray        = "#4a5f7f"
+fg          = "#e0f0ff"
+
+# synthwave — sunset magenta / cyan retrowave
+[palettes.synthwave]
+cyan        = "#03edf9"
+bright_cyan = "#72f1ff"
+purple      = "#b893ff"
+soft_purple = "#c792ea"
+pink        = "#ff7edb"
+magenta     = "#ff8cff"
+green       = "#72f1b8"
+yellow      = "#fede5d"
+red         = "#fe4450"
+gray        = "#6d6a8a"
+fg          = "#f0eff1"
+
+# matrix — phosphor green on black
+[palettes.matrix]
+cyan        = "#00ffaa"
+bright_cyan = "#5fffd7"
+purple      = "#00cc66"
+soft_purple = "#33dd88"
+pink        = "#00ff41"
+magenta     = "#39ff14"
+green       = "#00ff41"
+yellow      = "#aaff00"
+red         = "#ff5f5f"
+gray        = "#2f5f3f"
+fg          = "#c8ffd0"
+
+# tokyo-neon — Tokyo Night flavored neon
+[palettes.tokyo-neon]
+cyan        = "#7dcfff"
+bright_cyan = "#2ac3de"
+purple      = "#bb9af7"
+soft_purple = "#9d7cd8"
+pink        = "#f7768e"
+magenta     = "#c0caf5"
+green       = "#9ece6a"
+yellow      = "#e0af68"
+red         = "#f7768e"
+gray        = "#565f89"
+fg          = "#c0caf5"
+
+[username]
+show_always = true
+format = "[$user]($style)"
+style_user = "bold cyan"
+style_root = "bold red"
+
+[hostname]
+ssh_only = false
+format = "[@$hostname]($style) "
+style = "soft_purple"
+
+[directory]
+style = "yellow"
+truncation_length = 4
+truncate_to_repo = true
+read_only = " "
+read_only_style = "red"
+format = "[$path]($style)[$read_only]($read_only_style) "
+
+[character]
+success_symbol = "[❯](pink)[❯](purple)[❯](cyan)"
+error_symbol = "[❯](red)[❯](red)[❯](red)"
+vimcmd_symbol = "[❮](green)"
+
+[git_branch]
+symbol = " "
+style = "cyan"
+format = "[on ](dimmed gray)[$symbol$branch]($style) "
+
+[git_status]
+style = "red"
+format = '([$all_status$ahead_behind]($style)) '
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇡${ahead_count}⇣${behind_count}"
+conflicted = "="
+deleted = "✘${count}"
+renamed = "»${count}"
+modified = "✱${count}"
+staged = "✚${count}"
+untracked = "…${count}"
+stashed = "⚑${count}"
+
+[git_metrics]
+disabled = false
+added_style = "green"
+deleted_style = "red"
+format = '([+$added]($added_style) )([-$deleted]($deleted_style) )'
+
+[cmd_duration]
+min_time = 200
+style = "gray"
+format = "[󱎫 $duration]($style) "
+
+[nodejs]
+symbol = "⬢ "
+style = "green"
+format = "[$symbol($version )]($style)"
+
+[python]
+symbol = " "
+style = "yellow"
+format = '[$symbol($version )]($style)'
+
+[rust]
+symbol = " "
+style = "red"
+format = "[$symbol($version )]($style)"
+
+[golang]
+symbol = " "
+style = "cyan"
+format = "[$symbol($version )]($style)"
+
+[time]
+disabled = false
+time_format = "%H:%M"
+style = "gray"
+format = "[$time]($style)"

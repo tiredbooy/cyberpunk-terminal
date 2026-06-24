@@ -1,0 +1,39 @@
+# ============================================================
+#   Cyberpunk fullstack session — frontend + backend + git
+# ------------------------------------------------------------
+#   Load it with:
+#     kitty --session ~/.config/kitty/sessions/fullstack.session
+#   …or from a project directory:
+#     kitty --session ~/.config/kitty/sessions/fullstack.session --directory ~/code/myapp
+#
+#   Three tabs: an "edit" tab with a large editor, a "servers"
+#   tab split between a backend and a frontend dev server, and a
+#   "git" tab running lazygit (falls back to a shell).
+# ============================================================
+
+new_tab edit
+layout tall
+
+# Main editor pane. Swap nvim for whatever you use.
+launch --title editor --cwd=current nvim
+focus
+
+# A working shell beside the editor.
+launch --title shell --cwd=current
+
+new_tab servers
+layout fat
+
+# Backend dev server shell.
+launch --title backend --cwd=current
+focus
+
+# Frontend dev server shell.
+launch --title frontend --cwd=current
+
+new_tab git
+layout tall
+
+# Git UI (falls back to a shell if lazygit isn't installed).
+launch --title git --cwd=current sh -c 'command -v lazygit >/dev/null 2>&1 && exec lazygit || exec ${SHELL:-sh}'
+focus
