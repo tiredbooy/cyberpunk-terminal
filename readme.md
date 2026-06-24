@@ -601,6 +601,85 @@ tmux -f ~/.config/cyberpunk/cyberpunk.tmux.conf
 
 ---
 
+## 🎨 Prompt: custom or Starship
+
+The enhanced **custom prompt is the default**. A cyberpunk **Starship** preset
+ships alongside it — switch any time:
+
+```bash
+cyber prompt starship   # use Starship   (needs starship installed)
+cyber prompt custom     # back to the custom prompt
+cyber prompt            # toggle between the two
+cyber reload            # apply without opening a new shell
+```
+
+The choice is saved to `~/.config/cyberpunk/prompt`. You can also force it with
+`export CYBERPUNK_PROMPT=starship` (or `custom`). Starship is only used when it's
+actually installed — otherwise you always get the custom prompt.
+
+Prompt-related toggles:
+
+| Variable                | Effect                                            |
+| ----------------------- | ------------------------------------------------- |
+| `CYBERPUNK_TRANSIENT=0` | Disable the collapsing transient prompt           |
+| `CYBERPUNK_RUNTIME=0`   | Hide the Node/Python/Rust/Go version segment      |
+
+---
+
+## 🧰 Helper commands
+
+| Command         | What it does                                            |
+| --------------- | ------------------------------------------------------- |
+| `cyber help`    | Show the keybind & command cheatsheet                   |
+| `cyber prompt`  | Switch custom ⇄ Starship prompt                         |
+| `cyber opacity <v>` | Set the kitty window opacity live (e.g. `0.9`)      |
+| `cyber reload`  | Re-source `~/.zshrc`                                    |
+| `cyber update`  | `git pull` the repo (set `CYBERPUNK_REPO` if needed)    |
+| `y`             | Open `yazi`; cd to wherever you quit                    |
+| `proj`          | Fuzzy-jump to a project (zoxide history + common roots) |
+| `mkcd <dir>`    | Make a directory and enter it                           |
+| `up [N]`        | Climb N directories                                     |
+| `extract <a>`   | Unpack any archive (tar/zip/7z/zst/…)                   |
+| `lg`            | `lazygit`   ·   `top`/`btm` → `btop`   ·   `fm` → `yazi` ·   `md` → `glow` |
+
+---
+
+## 🎬 Welcome dashboard toggles
+
+The animated dashboard is shown once per window. Tune it by exporting these in
+`~/.zshrc` **before** the welcome block (defaults shown):
+
+| Variable                  | Default | Effect                              |
+| ------------------------- | ------- | ----------------------------------- |
+| `CYB_ANIMATE`             | `1`     | Boot + reveal animation             |
+| `CYB_BOOT`                | `1`     | Boot text sequence (only when `CYB_ANIMATE=1`) |
+| `CYB_REVEAL_DELAY`        | `0.012` | Per-line reveal delay (seconds)     |
+| `CYB_GIT`                 | `1`     | Git panel (when cwd is a repo)      |
+| `CYB_NET`                 | `1`     | Network panel (IP / Wi-Fi)          |
+| `CYB_WEATHER`             | `0`     | Weather panel (cached ~3h)          |
+| `CYB_WEATHER_LOCATION`    | auto    | e.g. `"Tehran"`                     |
+| `CYB_TODOS`               | `0`     | Todos from `~/.config/cyberpunk/todo.txt` |
+| `CYB_IMAGE`               | `0`     | Show an image logo (`icat`) instead of ASCII |
+
+> Want the fastest possible startup? `export CYB_ANIMATE=0`.
+
+---
+
+## 🪟 Sessions & multiplexing
+
+A ready-made dev layout (editor | shell | system monitor) ships in
+`~/.config/kitty/sessions/dev.session`:
+
+```bash
+kdev                                                   # launch the dev layout
+kitty --session ~/.config/kitty/sessions/dev.session --directory ~/code/proj
+```
+
+Combine with the built-in split keybinds (`Ctrl+Shift+\` / `-`, `Ctrl+Shift+L`
+to cycle layouts, `Ctrl+Shift+H/J/K` to move between splits).
+
+---
+
 ## 🧩 Project Structure
 
 ```

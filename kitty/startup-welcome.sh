@@ -151,6 +151,7 @@ print_logo() {
     if [[ "$CYB_IMAGE" == 1 && -r "$CYB_IMAGE_FILE" ]] && command -v kitty >/dev/null 2>&1; then
         printf '%s' "$SPACES"
         kitty +kitten icat --align left "$CYB_IMAGE_FILE" 2>/dev/null && return 0
+<<<<<<< HEAD
     fi
     local n=${#LOGO[@]} i sr sg sb er eg eb
     printf '%s' "$CYB_BOLD"
@@ -302,6 +303,262 @@ fi
 SSID=$(iwgetid -r 2>/dev/null)
 [[ -z "$SSID" ]] && SSID=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | awk -F: '/^yes/{print $2; exit}')
 
+=======
+<<<<<<< HEAD
+    fi
+    local n=${#LOGO[@]} i sr sg sb er eg eb
+    printf '%s' "$CYB_BOLD"
+    for (( i=0; i<n; i++ )); do
+        # Diagonal blend: line start cyan→purple, line end purple→pink.
+        sr=$(_lerp "${CYB_GRAD_START[0]}" "${CYB_GRAD_MID[0]}" "$i" "$n")
+        sg=$(_lerp "${CYB_GRAD_START[1]}" "${CYB_GRAD_MID[1]}" "$i" "$n")
+        sb=$(_lerp "${CYB_GRAD_START[2]}" "${CYB_GRAD_MID[2]}" "$i" "$n")
+        er=$(_lerp "${CYB_GRAD_MID[0]}" "${CYB_GRAD_END[0]}" "$i" "$n")
+        eg=$(_lerp "${CYB_GRAD_MID[1]}" "${CYB_GRAD_END[1]}" "$i" "$n")
+        eb=$(_lerp "${CYB_GRAD_MID[2]}" "${CYB_GRAD_END[2]}" "$i" "$n")
+        reveal "${SPACES}$(cyb_gradient "${LOGO[i]}" "$sr" "$sg" "$sb" "$er" "$eg" "$eb")"
+    done
+    printf '%s' "$CYB_RESET"
+}
+
+# ------------------------------------------------------------
+#  GATHER SYSTEM INFO (portable: Linux + macOS)
+# ------------------------------------------------------------
+SHELL_NAME=$(basename "${SHELL:-sh}")
+HOST=$(hostname 2>/dev/null || uname -n)
+WHO=$(whoami)
+TIME=$(date '+%H:%M:%S')
+
+UPTIME=$(uptime -p 2>/dev/null | sed 's/up //')
+[[ -z "$UPTIME" ]] && UPTIME=$(uptime 2>/dev/null | sed -E 's/.*up *([^,]*),.*/\1/' | sed 's/^ *//')
+
+KERNEL=$(uname -r)
+
+<<<<<<< HEAD
+<<<<<<< HEAD
+# System info with progress bars
+print_fancy_info "" "USER   " "${USER}@${HOSTNAME}" "$NEON_PINK"
+print_fancy_info "🐧" "OS     " "$DISTRO" "$ELECTRIC_BLUE"
+print_fancy_info "" "KERNEL " "$KERNEL" "$NEON_PURPLE"
+print_fancy_info "🐚" "SHELL  " "$SHELL_NAME" "$NEON_CYAN"
+[[ "$PACKAGES" != "?" ]] && print_fancy_info "" "PKGS   " "$PACKAGES" "$NEON_GREEN"
+print_fancy_info "󰍛" "MEMORY " "${MEM_USED} / ${MEM_TOTAL}" "$NEON_YELLOW" "$(draw_bar $MEM_PERCENT)"
+print_fancy_info "󰓅" "LOAD   " "$LOAD" "$NEON_GREEN"
+[[ -n "$GPU" ]] && print_fancy_info "󰢮" "GPU    " "${GPU:0:50}" "$CYBER_RED"
+=======
+=======
+>>>>>>> test
+if [[ -r /etc/os-release ]]; then
+    DISTRO=$(. /etc/os-release; echo "${PRETTY_NAME:-$NAME}")
+elif [[ "$(uname)" == "Darwin" ]]; then
+    DISTRO="macOS $(sw_vers -productVersion 2>/dev/null)"
+else
+    DISTRO=$(uname -s)
+fi
+<<<<<<< HEAD
+>>>>>>> eb5ce91 (updated the terminal ui)
+=======
+>>>>>>> test
+
+# CPU model.
+CPU=$(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo 2>/dev/null)
+[[ -z "$CPU" ]] && CPU=$(sysctl -n machdep.cpu.brand_string 2>/dev/null)
+[[ -z "$CPU" ]] && CPU=$(uname -p 2>/dev/null)
+CPU=$(echo "$CPU" | sed -E 's/\(R\)|\(TM\)|CPU|Processor//g; s/  +/ /g; s/^ *//; s/ *$//')
+
+# Memory.
+if command -v free >/dev/null 2>&1; then
+    MEM_USED=$(free -h | awk '/Mem/ {print $3}')
+    MEM_TOTAL=$(free -h | awk '/Mem/ {print $2}')
+    MEM_PERCENT=$(free | awk '/Mem/ {printf "%.0f", $3/$2 * 100}')
+else
+    MEM_USED="?"; MEM_TOTAL="?"; MEM_PERCENT=0
+fi
+
+# Disk usage of /.
+DISK_LINE=$(df -h / 2>/dev/null | awk 'NR==2')
+DISK_USED=$(awk '{print $3}' <<< "$DISK_LINE")
+DISK_TOTAL=$(awk '{print $2}' <<< "$DISK_LINE")
+DISK_PERCENT=$(awk '{gsub(/%/,"",$5); print $5+0}' <<< "$DISK_LINE")
+
+# Package count.
+if   command -v pacman      >/dev/null 2>&1; then PACKAGES=$(pacman -Qq 2>/dev/null | wc -l)
+elif command -v dpkg-query  >/dev/null 2>&1; then PACKAGES=$(dpkg-query -f '.\n' -W 2>/dev/null | wc -l)
+elif command -v rpm         >/dev/null 2>&1; then PACKAGES=$(rpm -qa 2>/dev/null | wc -l)
+elif command -v brew        >/dev/null 2>&1; then PACKAGES=$(brew list 2>/dev/null | wc -l)
+else PACKAGES="?"; fi
+PACKAGES=$(echo "$PACKAGES" | tr -d ' ')
+
+# Load average (1-min).
+LOAD=$(uptime 2>/dev/null | sed -E 's/.*load average[s]?: *//' | awk -F',' '{gsub(/ /,"",$1); print $1}')
+
+# GPU (optional).
+GPU=$(lspci 2>/dev/null | grep -E "VGA|3D|Display" | cut -d: -f3- | sed 's/^ *//' | head -n1)
+
+# Network: local IP + Wi-Fi SSID.
+IP=""
+if command -v ip >/dev/null 2>&1; then
+    IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
+fi
+[[ -z "$IP" ]] && IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+[[ -z "$IP" ]] && IP=$(ipconfig getifaddr en0 2>/dev/null)
+SSID=$(iwgetid -r 2>/dev/null)
+[[ -z "$SSID" ]] && SSID=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | awk -F: '/^yes/{print $2; exit}')
+
+=======
+    fi
+    local n=${#LOGO[@]} i sr sg sb er eg eb
+    printf '%s' "$CYB_BOLD"
+    for (( i=0; i<n; i++ )); do
+        # Diagonal blend: line start cyan→purple, line end purple→pink.
+        sr=$(_lerp "${CYB_GRAD_START[0]}" "${CYB_GRAD_MID[0]}" "$i" "$n")
+        sg=$(_lerp "${CYB_GRAD_START[1]}" "${CYB_GRAD_MID[1]}" "$i" "$n")
+        sb=$(_lerp "${CYB_GRAD_START[2]}" "${CYB_GRAD_MID[2]}" "$i" "$n")
+        er=$(_lerp "${CYB_GRAD_MID[0]}" "${CYB_GRAD_END[0]}" "$i" "$n")
+        eg=$(_lerp "${CYB_GRAD_MID[1]}" "${CYB_GRAD_END[1]}" "$i" "$n")
+        eb=$(_lerp "${CYB_GRAD_MID[2]}" "${CYB_GRAD_END[2]}" "$i" "$n")
+        reveal "${SPACES}$(cyb_gradient "${LOGO[i]}" "$sr" "$sg" "$sb" "$er" "$eg" "$eb")"
+    done
+    printf '%s' "$CYB_RESET"
+}
+
+# ------------------------------------------------------------
+#  GATHER SYSTEM INFO (portable: Linux + macOS)
+# ------------------------------------------------------------
+# Detect the OS once; every probe below branches off this so it
+# degrades to a neutral placeholder on Linux, macOS, or neither.
+OS_NAME=$(uname -s 2>/dev/null || echo unknown)
+
+SHELL_NAME=$(basename "${SHELL:-sh}")
+HOST=$(hostname 2>/dev/null || uname -n)
+WHO=$(whoami)
+TIME=$(date '+%H:%M:%S')
+
+UPTIME=$(uptime -p 2>/dev/null | sed 's/up //')
+if [[ -z "$UPTIME" && "$OS_NAME" == "Darwin" ]]; then
+    # Derive a human uptime from kern.boottime (sec=...) vs now.
+    _boot_sec=$(sysctl -n kern.boottime 2>/dev/null | sed -E 's/.*[^a-z]sec *= *([0-9]+).*/\1/')
+    if [[ "$_boot_sec" =~ ^[0-9]+$ ]]; then
+        _now_sec=$(date +%s 2>/dev/null)
+        _up_sec=$(( _now_sec - _boot_sec ))
+        (( _up_sec < 0 )) && _up_sec=0
+        _d=$(( _up_sec / 86400 )); _h=$(( (_up_sec % 86400) / 3600 )); _m=$(( (_up_sec % 3600) / 60 ))
+        (( _d > 0 )) && UPTIME+="${_d}d "
+        (( _h > 0 )) && UPTIME+="${_h}h "
+        UPTIME+="${_m}m"
+    fi
+fi
+[[ -z "$UPTIME" ]] && UPTIME=$(uptime 2>/dev/null | sed -E 's/.*up *([^,]*),.*/\1/' | sed 's/^ *//')
+[[ -z "$UPTIME" ]] && UPTIME="—"
+
+KERNEL=$(uname -r)
+
+if [[ -r /etc/os-release ]]; then
+    DISTRO=$(. /etc/os-release; echo "${PRETTY_NAME:-$NAME}")
+elif [[ "$(uname)" == "Darwin" ]]; then
+    DISTRO="macOS $(sw_vers -productVersion 2>/dev/null)"
+else
+    DISTRO=$(uname -s)
+fi
+
+# CPU model + core count.
+CPU=$(awk -F': ' '/model name/{print $2; exit}' /proc/cpuinfo 2>/dev/null)
+[[ -z "$CPU" ]] && CPU=$(sysctl -n machdep.cpu.brand_string 2>/dev/null)
+[[ -z "$CPU" ]] && CPU=$(uname -p 2>/dev/null)
+CPU=$(echo "$CPU" | sed -E 's/\(R\)|\(TM\)|CPU|Processor//g; s/  +/ /g; s/^ *//; s/ *$//')
+CPU_CORES=$(nproc 2>/dev/null)
+[[ -z "$CPU_CORES" ]] && CPU_CORES=$(sysctl -n hw.ncpu 2>/dev/null)
+[[ "$CPU_CORES" =~ ^[0-9]+$ ]] && CPU="${CPU} (${CPU_CORES})"
+
+# Memory (Linux: free; macOS: hw.memsize + vm_stat).
+MEM_USED="?"; MEM_TOTAL="?"; MEM_PERCENT=0
+if command -v free >/dev/null 2>&1; then
+    MEM_USED=$(free -h | awk '/Mem/ {print $3}')
+    MEM_TOTAL=$(free -h | awk '/Mem/ {print $2}')
+    MEM_PERCENT=$(free | awk '/Mem/ {printf "%.0f", $3/$2 * 100}')
+elif [[ "$OS_NAME" == "Darwin" ]] && command -v vm_stat >/dev/null 2>&1; then
+    _mem_total_b=$(sysctl -n hw.memsize 2>/dev/null)
+    # Page size: from the vm_stat header, fall back to `pagesize`, then 4096.
+    _vm=$(vm_stat 2>/dev/null)
+    _pgsz=$(printf '%s\n' "$_vm" | sed -nE 's/.*page size of ([0-9]+) bytes.*/\1/p' | head -n1)
+    [[ -z "$_pgsz" ]] && _pgsz=$(pagesize 2>/dev/null)
+    [[ "$_pgsz" =~ ^[0-9]+$ ]] || _pgsz=4096
+    # Pages that count as "in use": active + wired + compressed.
+    _pg_used=$(printf '%s\n' "$_vm" | awk -v pg="$_pgsz" '
+        /Pages active/                  {gsub(/\./,"",$3); a=$3}
+        /Pages wired down/              {gsub(/\./,"",$4); w=$4}
+        /Pages occupied by compressor/  {gsub(/\./,"",$5); c=$5}
+        END {print (a+w+c)}')
+    if [[ "$_mem_total_b" =~ ^[0-9]+$ && "$_pg_used" =~ ^[0-9]+$ ]]; then
+        _mem_used_b=$(( _pg_used * _pgsz ))
+        MEM_TOTAL=$(awk -v b="$_mem_total_b" 'BEGIN{printf "%.1fGi", b/1073741824}')
+        MEM_USED=$(awk -v b="$_mem_used_b" 'BEGIN{printf "%.1fGi", b/1073741824}')
+        (( _mem_total_b > 0 )) && MEM_PERCENT=$(awk -v u="$_mem_used_b" -v t="$_mem_total_b" 'BEGIN{printf "%.0f", u/t*100}')
+    fi
+fi
+
+# Disk usage of /.
+DISK_LINE=$(df -h / 2>/dev/null | awk 'NR==2')
+DISK_USED=$(awk '{print $3}' <<< "$DISK_LINE")
+DISK_TOTAL=$(awk '{print $2}' <<< "$DISK_LINE")
+DISK_PERCENT=$(awk '{gsub(/%/,"",$5); print $5+0}' <<< "$DISK_LINE")
+
+# Package count.
+if   command -v pacman      >/dev/null 2>&1; then PACKAGES=$(pacman -Qq 2>/dev/null | wc -l)
+elif command -v dpkg-query  >/dev/null 2>&1; then PACKAGES=$(dpkg-query -f '.\n' -W 2>/dev/null | wc -l)
+elif command -v rpm         >/dev/null 2>&1; then PACKAGES=$(rpm -qa 2>/dev/null | wc -l)
+elif command -v brew        >/dev/null 2>&1; then PACKAGES=$(brew list 2>/dev/null | wc -l)
+else PACKAGES="?"; fi
+PACKAGES=$(echo "$PACKAGES" | tr -d ' ')
+
+# Load average (1-min): uptime first, then sysctl vm.loadavg on macOS.
+LOAD=$(uptime 2>/dev/null | sed -E 's/.*load average[s]?: *//' | awk -F',' '{gsub(/ /,"",$1); print $1}')
+if [[ -z "$LOAD" && "$OS_NAME" == "Darwin" ]]; then
+    # vm.loadavg looks like: { 1.23 1.10 0.98 }
+    LOAD=$(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}')
+fi
+[[ -z "$LOAD" ]] && LOAD="—"
+
+# Battery (optional): Linux /sys/class/power_supply, macOS pmset.
+BATTERY=""
+for _bat in /sys/class/power_supply/BAT*; do
+    if [[ -r "$_bat/capacity" ]]; then
+        BATTERY=$(cat "$_bat/capacity" 2>/dev/null)
+        BATTERY="${BATTERY}%"
+        if [[ -r "$_bat/status" ]]; then
+            _bstat=$(cat "$_bat/status" 2>/dev/null)
+            [[ "$_bstat" == "Charging" ]] && BATTERY+=" ⚡"
+        fi
+        break
+    fi
+done
+if [[ -z "$BATTERY" && "$OS_NAME" == "Darwin" ]] && command -v pmset >/dev/null 2>&1; then
+    _pm=$(pmset -g batt 2>/dev/null)
+    _bpct=$(printf '%s\n' "$_pm" | grep -oE '[0-9]+%' | head -n1)
+    if [[ -n "$_bpct" ]]; then
+        BATTERY="$_bpct"
+        printf '%s\n' "$_pm" | grep -qiE 'charging|charged' && BATTERY+=" ⚡"
+    fi
+fi
+
+# GPU (optional).
+GPU=$(lspci 2>/dev/null | grep -E "VGA|3D|Display" | cut -d: -f3- | sed 's/^ *//' | head -n1)
+
+# Network: local IP + Wi-Fi SSID.
+IP=""
+if command -v ip >/dev/null 2>&1; then
+    IP=$(ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')
+fi
+[[ -z "$IP" ]] && IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+[[ -z "$IP" ]] && IP=$(ipconfig getifaddr en0 2>/dev/null)
+[[ -z "$IP" ]] && IP=$(ipconfig getifaddr en1 2>/dev/null)
+# Last resort: first non-loopback IPv4 from ifconfig (macOS / BSD).
+[[ -z "$IP" ]] && IP=$(ifconfig 2>/dev/null | awk '/inet /{if($2!="127.0.0.1"){print $2; exit}}')
+SSID=$(iwgetid -r 2>/dev/null)
+[[ -z "$SSID" ]] && SSID=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | awk -F: '/^yes/{print $2; exit}')
+
+>>>>>>> 4544c01 (updated the docs and added more features)
+>>>>>>> origin/main
 # ------------------------------------------------------------
 #  RENDER
 # ------------------------------------------------------------
@@ -326,7 +583,14 @@ info_row "🐚"  "SHELL " "$SHELL_NAME" "$CYB_CYAN_BRIGHT"
 info_row "󰍛"  "MEM   " "${MEM_USED} / ${MEM_TOTAL}" "$CYB_YELLOW" "$(draw_bar "$MEM_PERCENT")"
 [[ -n "$DISK_TOTAL" ]] && info_row "" "DISK  " "${DISK_USED} / ${DISK_TOTAL}" "$CYB_PURPLE" "$(draw_bar "${DISK_PERCENT:-0}")"
 info_row "󰓅"  "LOAD  " "$LOAD" "$CYB_GREEN"
+<<<<<<< HEAD
 [[ -n "$BATTERY" ]] && info_row "" "BATT  " "$BATTERY" "$CYB_GREEN_BRIGHT"
+=======
+<<<<<<< HEAD
+=======
+[[ -n "$BATTERY" ]] && info_row "" "BATT  " "$BATTERY" "$CYB_GREEN_BRIGHT"
+>>>>>>> 4544c01 (updated the docs and added more features)
+>>>>>>> origin/main
 [[ -n "$GPU" ]] && info_row "󰢮" "GPU   " "${GPU:0:42}" "$CYB_RED"
 
 # ---- Network panel ----
